@@ -1,10 +1,13 @@
 package com.webapp.security.sso.oauth2.service;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.OAuth2RefreshToken;
-import org.springframework.security.oauth2.core.OAuth2Token;
+import org.springframework.security.oauth2.core.*;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
@@ -12,22 +15,22 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
-import org.springframework.stereotype.Component;
+import org.springframework.security.oauth2.server.authorization.token.*;
+import org.springframework.stereotype.Service;
+
 
 /**
  * OAuth2工具类
  * 提供OAuth2相关的公共方法
  */
-@Component
+@Service
 public class OAuth2Service {
 
     private final RegisteredClientRepository registeredClientRepository;
     private final OAuth2TokenGenerator<?> tokenGenerator;
     private final AuthorizationServerSettings authorizationServerSettings;
 
+    @Autowired
     public OAuth2Service(
             RegisteredClientRepository registeredClientRepository,
             OAuth2TokenGenerator<?> tokenGenerator,
@@ -84,7 +87,7 @@ public class OAuth2Service {
                 .principal(authentication)
                 .authorizationServerContext(createAuthorizationServerContext())
                 .tokenType(OAuth2TokenType.ACCESS_TOKEN)
-                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .authorizationGrantType(new AuthorizationGrantType("password"))
                 .authorizedScopes(registeredClient.getScopes())
                 .build();
 
@@ -129,7 +132,7 @@ public class OAuth2Service {
                 .principal(authentication)
                 .authorizationServerContext(createAuthorizationServerContext())
                 .tokenType(OAuth2TokenType.REFRESH_TOKEN)
-                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .authorizationGrantType(new AuthorizationGrantType("password"))
                 .authorizedScopes(registeredClient.getScopes())
                 .build();
 

@@ -29,7 +29,7 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -45,7 +45,7 @@ public class OAuth2Controller {
     private static final Logger log = LoggerFactory.getLogger(OAuth2Controller.class);
 
     private final AuthenticationManager authenticationManager;
-    //private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
+    // private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
     private final OAuth2AuthorizationService authorizationService;
 
     // 添加OAuth2Utils依赖
@@ -80,7 +80,7 @@ public class OAuth2Controller {
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
                     .withRegisteredClient(registeredClient)
                     .principalName(authentication.getName())
-                    .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                    .authorizationGrantType(new AuthorizationGrantType("password"))
                     .authorizedScopes(registeredClient.getScopes());
 
             // 5. 生成Access Token
@@ -119,13 +119,16 @@ public class OAuth2Controller {
 
         } catch (AuthenticationException e) {
             log.warn("OAuth2 Login failed for user: " + loginRequest.getUsername(), e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", org.springframework.http.HttpStatus.UNAUTHORIZED);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                    org.springframework.http.HttpStatus.UNAUTHORIZED);
         } catch (IllegalStateException e) {
             log.warn("OAuth2 Client error: " + e.getMessage());
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(), org.springframework.http.HttpStatus.BAD_REQUEST);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(),
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("OAuth2 Login error for user: " + loginRequest.getUsername(), e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "服务器内部错误", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "服务器内部错误",
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -329,10 +332,12 @@ public class OAuth2Controller {
 
         } catch (IllegalStateException e) {
             log.warn("OAuth2 Refresh token client error: " + e.getMessage());
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(), org.springframework.http.HttpStatus.BAD_REQUEST);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(),
+                    org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Refresh token error", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "刷新令牌失败", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "刷新令牌失败",
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

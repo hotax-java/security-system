@@ -56,6 +56,11 @@ public class PermissionVO {
     private String permPath;
 
     /**
+     * 菜单图标
+     */
+    private String icon;
+
+    /**
      * 状态：0-禁用，1-启用
      */
     private Integer status;

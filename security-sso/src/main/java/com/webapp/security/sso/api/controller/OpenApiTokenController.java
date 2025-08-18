@@ -29,7 +29,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -187,7 +187,8 @@ public class OpenApiTokenController {
             List<String> permissions = introspectionService.getPermissionsFromDatabase(appId);
 
             // 7.6 创建OAuth2Authorization并包含appId
-            OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
+            OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
+                    .withRegisteredClient(registeredClient)
                     .principalName(OAUTH2_CLIENT_ID)
                     .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                     .attribute("app_id", appId)

@@ -97,12 +97,11 @@ public class SecurityConfig {
         public SecurityFilterChain openApiSecurityFilterChain(
                         HttpSecurity http) throws Exception {
                 http
-                                // 使用requestMatchers()替代antMatcher()来匹配多个路径
-                                .requestMatchers(matchers -> matchers
-                                                .antMatchers("/api/v1/**", "/oauth2/introspect"))
+                                // 使用securityMatcher替代requestMatchers+antMatchers
+                                .securityMatcher("/api/v1/**", "/oauth2/introspect")
                                 .authorizeHttpRequests(auth -> auth
                                                 // 为自省端点添加特定的认证要求
-                                                .antMatchers("/oauth2/introspect").authenticated()
+                                                .requestMatchers("/oauth2/introspect").authenticated()
                                                 // 其他API路径保持不变
                                                 .anyRequest().authenticated())
                                 // 为自省端点启用HTTP Basic认证
@@ -121,11 +120,11 @@ public class SecurityConfig {
         public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
                 http
                                 .authorizeHttpRequests((authorize) -> authorize
-                                                .antMatchers("/login", "/logout", "/oauth2/**", "/v1/oauth2/**",
+                                                .requestMatchers("/login", "/logout", "/oauth2/**", "/v1/oauth2/**",
                                                                 "/.well-known/jwks.json",
                                                                 "/api/token-blacklist/**", "/favicon.ico",
                                                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                                                "/error","/oauth2/**/**")
+                                                                "/error", "/oauth2/**/**")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> form

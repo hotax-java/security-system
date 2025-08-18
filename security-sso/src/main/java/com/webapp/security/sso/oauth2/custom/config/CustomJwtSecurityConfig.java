@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 可以通过配置开关启用或禁用
  */
 @Configuration
-//@EnableWebSecurity
+// @EnableWebSecurity
 @ConditionalOnProperty(name = "custom.jwt.enabled", havingValue = "true", matchIfMissing = false)
 public class CustomJwtSecurityConfig {
 
@@ -32,7 +32,7 @@ public class CustomJwtSecurityConfig {
     private final PasswordEncoder passwordEncoder;
 
     public CustomJwtSecurityConfig(CustomJwtAuthenticationFilter customJwtAuthenticationFilter,
-                                   CustomJwtUserDetailsService customJwtUserDetailsService, PasswordEncoder passwordEncoder) {
+            CustomJwtUserDetailsService customJwtUserDetailsService, PasswordEncoder passwordEncoder) {
         this.customJwtAuthenticationFilter = customJwtAuthenticationFilter;
         this.customJwtUserDetailsService = customJwtUserDetailsService;
         this.passwordEncoder = passwordEncoder;
@@ -49,9 +49,9 @@ public class CustomJwtSecurityConfig {
         log.info("Configuring custom JWT security filter chain");
 
         http
-                .antMatcher("/api/custom/**") // 只对自定义JWT接口生效
+                .securityMatcher("/api/custom/**") // 只对自定义JWT接口生效
                 .authorizeHttpRequests((authorize) -> authorize
-                        .antMatchers("/api/custom/jwt/login", "/api/custom/jwt/refresh",
+                        .requestMatchers("/api/custom/jwt/login", "/api/custom/jwt/refresh",
                                 "/api/custom/jwt/validate", "/api/custom/jwt/userinfo")
                         .permitAll()
                         .anyRequest().authenticated())

@@ -1,18 +1,18 @@
 package com.webapp.security.admin.controller.permission.dto;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
 import java.lang.annotation.*;
 
 /**
- * 菜单路径必填验证注解
+ * 自定义校验注解，校验权限类型为菜单时，路径是否必填
  */
 @Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = MenuPathRequiredValidator.class)
 @Documented
+@Constraint(validatedBy = { MenuPathRequiredValidator.class })
 public @interface MenuPathRequired {
-    String message() default "菜单类型的权限必须填写路径";
+    String message() default "菜单类型的权限必须设置路径";
 
     Class<?>[] groups() default {};
 

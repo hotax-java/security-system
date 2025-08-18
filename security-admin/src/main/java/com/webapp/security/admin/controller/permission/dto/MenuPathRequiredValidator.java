@@ -1,7 +1,7 @@
 package com.webapp.security.admin.controller.permission.dto;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * 菜单路径必填验证器

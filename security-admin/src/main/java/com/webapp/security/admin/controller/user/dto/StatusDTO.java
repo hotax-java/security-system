@@ -2,7 +2,7 @@ package com.webapp.security.admin.controller.user.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 状态更新请求DTO

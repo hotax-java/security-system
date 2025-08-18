@@ -2,7 +2,7 @@ package com.webapp.security.admin.controller.role.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Size;
 
 /**
  * 角色更新请求DTO

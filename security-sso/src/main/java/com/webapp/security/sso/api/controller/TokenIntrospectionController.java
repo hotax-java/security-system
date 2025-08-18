@@ -26,9 +26,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -78,7 +79,8 @@ public class TokenIntrospectionController {
             clientAuthentication = authenticateClient(authHeader);
         } catch (BadCredentialsException e) {
             logger.warn("Client authentication failed: {}", e.getMessage());
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.UNAUTHORIZED_CLIENT, e.getMessage(), HttpStatus.UNAUTHORIZED);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.UNAUTHORIZED_CLIENT, e.getMessage(),
+                    HttpStatus.UNAUTHORIZED);
         }
         // 设置认证上下文
         SecurityContextHolder.getContext().setAuthentication(clientAuthentication);

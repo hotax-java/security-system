@@ -53,6 +53,7 @@ public class UserLoginService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private OAuth2AuthorizationService authorizationService;
+
     /**
      * 生成用户令牌
      * 
@@ -81,7 +82,7 @@ public class UserLoginService {
         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
                 .withRegisteredClient(registeredClient)
                 .principalName(user.getUsername())
-                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .authorizationGrantType(new AuthorizationGrantType("password"))
                 .authorizedScopes(registeredClient.getScopes());
 
         // 生成访问令牌
@@ -110,7 +111,7 @@ public class UserLoginService {
         response.put("expires_in", expiresIn);
         response.put("scope", String.join(" ", accessToken.getScopes()));
         response.put("username", authentication.getName());
-        //response.put("client_id", clientId);
+        // response.put("client_id", clientId);
         if (accessToken.getExpiresAt() != null) {
             response.put("expires_in",
                     Instant.now().until(accessToken.getExpiresAt(), ChronoUnit.SECONDS));

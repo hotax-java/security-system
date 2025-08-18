@@ -23,6 +23,7 @@ public interface PermissionConverter {
     @Mapping(target = "statusName", source = "status", qualifiedByName = "statusToName")
     @Mapping(target = "permTypeName", source = "permType", qualifiedByName = "permTypeToName")
     @Mapping(target = "parentName", ignore = true) // parentName需要手动设置
+    @Mapping(target = "icon", source = "icon")
     PermissionVO toVO(SysPermission entity);
 
     /**
