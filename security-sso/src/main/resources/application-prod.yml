@@ -1,0 +1,10 @@
+# 日志配置 - 生产环境降低日志级别
+logging:
+  level:
+    com.webapp.security: INFO
+    org.springframework.security: WARN
+    org.springframework.security.oauth2: WARN
+    org.springframework.web: WARN
+    org.springframework.boot: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

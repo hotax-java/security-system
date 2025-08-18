@@ -1,0 +1,29 @@
+### 微信OAuth2测试
+
+### 1. 发起微信授权请求
+# 此请求会重定向到微信授权页面
+GET http://localhost:9000/oauth2/wechat/authorize
+Accept: */*
+
+### 2. 微信授权回调（模拟微信服务器回调）
+# 注意：code参数需要替换为真实的授权码，state参数需要与发起请求时一致
+# 实际环境中，这个请求是由微信服务器发起的
+GET http://localhost:9000/oauth2/wechat/callback?code=REPLACE_WITH_REAL_CODE&state=REPLACE_WITH_REAL_STATE
+Accept: */*
+
+### 3. 绑定已有账号
+POST http://localhost:9000/oauth2/wechat/bind
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=admin123&encryptedOpenId=REPLACE_WITH_ENCRYPTED_OPENID
+
+### 4. 创建新账号
+POST http://localhost:9000/oauth2/wechat/create
+Content-Type: application/x-www-form-urlencoded
+
+encryptedOpenId=REPLACE_WITH_ENCRYPTED_OPENID&nickname=微信用户&headimgurl=https://example.com/avatar.jpg
+
+### 5. 使用获取的令牌访问受保护资源
+GET http://localhost:9000/api/user/info
+Authorization: Bearer REPLACE_WITH_ACCESS_TOKEN
+Accept: application/json 

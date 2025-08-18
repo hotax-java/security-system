@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.webapp.security.core.mapper.SysRoleMapper">
+
+    <!-- 根据角色编码查询角色 -->
+    <select id="selectByRoleCode" resultType="com.webapp.security.core.entity.SysRole">
+        SELECT * FROM sys_role WHERE role_code = #{roleCode} AND deleted = 0
+    </select>
+
+    <!-- 查询角色的权限编码列表 -->
+    <select id="selectRolePermissions" resultType="java.lang.String">
+        SELECT DISTINCT sp.perm_code
+        FROM sys_role sr
+        JOIN sys_role_permission srp ON sr.role_id = srp.role_id
+        JOIN sys_permission sp ON srp.permission_id = sp.permission_id
+        WHERE sr.role_id = #{roleId}
+        AND sr.status = 1 AND sr.deleted = 0
+        AND sp.status = 1 AND sp.deleted = 0
+    </select>
+
+    <!-- 查询角色的权限完整信息 -->
+    <select id="selectRolePermissionDetails" resultType="com.webapp.security.core.entity.SysPermission">
+        SELECT DISTINCT sp.*
+        FROM sys_role sr
+        JOIN sys_role_permission srp ON sr.role_id = srp.role_id
+        JOIN sys_permission sp ON srp.permission_id = sp.permission_id
+        WHERE sr.role_id = #{roleId}
+        AND sr.deleted = 0
+        AND sp.deleted = 0
+    </select>
+
+    <!-- 根据用户ID查询用户的角色列表 -->
+    <select id="selectRolesByUserId" resultType="com.webapp.security.core.entity.SysRole">
+        SELECT sr.*
+        FROM sys_role sr
+        JOIN sys_user_role sur ON sr.role_id = sur.role_id
+        WHERE sur.user_id = #{userId}
+        AND sr.status = 1 AND sr.deleted = 0
+    </select>
+    
+</mapper> 

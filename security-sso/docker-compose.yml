@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  sso-service:
+    build:
+      context: ./security-sso  # Dockerfile 所在目录（替换为实际路径）
+      dockerfile: Dockerfile
+    image: security-sso:1.0
+    container_name: security-sso
+    restart: always
+    environment:
+      # MySQL 配置（替换为实际部署的 MySQL 地址、密码）
+      DB_URL: jdbc:mysql://host.docker.internal:3306/admin?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+      DB_USERNAME: root
+      DB_PASSWORD: 123456
+
+      # Redis 配置（替换为实际部署的 Redis 地址、密码）
+      SPRING_REDIS_HOST: host.docker.internal
+      SPRING_REDIS_PORT: 6379
+      # Kafka 配置（替换为实际部署的 Kafka 地址）
+#      SPRING_KAFKA_BOOTSTRAP_SERVERS: <Kafka主机IP>:9092
+      # 其他 Kafka 相关配置（如分组、序列化等，按需添加）
+
+      SERVER_PORT: 9010  # 应用端口
+      SERVER_BASE_URL: http://host.docker.internal:9010
+    ports:
+      - "9010:9010"  # 宿主机端口映射
+    networks:
+      - security-network
+
+networks:
+  security-network:  # 使用默认网络，若需自定义可保持原有配置
+    driver: bridge

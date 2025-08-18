@@ -1,0 +1,150 @@
+.App {
+  min-height: 100vh;
+}
+
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Ant Design 组件自定义样式 */
+.ant-layout-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ant-menu-horizontal {
+  background: transparent;
+  border-bottom: none;
+}
+
+.ant-menu-horizontal > .ant-menu-item {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom: 2px solid transparent;
+}
+
+.ant-menu-horizontal > .ant-menu-item:hover {
+  color: white;
+  border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+.ant-menu-horizontal > .ant-menu-item-selected {
+  color: white;
+  border-bottom-color: white;
+}
+
+/* 侧边栏样式 */
+.ant-layout-sider {
+  background: white;
+}
+
+.ant-menu-inline {
+  border-right: none;
+}
+
+/* 内容区域样式 */
+.ant-layout-content {
+  background: #f5f5f5;
+  padding: 24px;
+}
+
+/* 卡片样式 */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 表格样式 */
+.ant-table {
+  background: white;
+  border-radius: 8px;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 按钮样式 */
+.ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+/* 表单样式 */
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-input-password,
+.ant-select-selector {
+  border-radius: 6px;
+}
+
+.ant-input:focus,
+.ant-input-password:focus,
+.ant-select-focused .ant-select-selector {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* 模态框样式 */
+.ant-modal {
+  border-radius: 8px;
+}
+
+.ant-modal-header {
+  border-radius: 8px 8px 0 0;
+}
+
+/* 标签样式 */
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* 分页样式 */
+.ant-pagination {
+  text-align: center;
+  margin-top: 24px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-table {
+    font-size: 12px;
+  }
+  
+  .ant-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}

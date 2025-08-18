@@ -1,0 +1,12 @@
+# 开发环境配置
+
+# 日志配置 - 开发环境详细日志
+logging:
+  level:
+    com.webapp.security: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.boot.autoconfigure: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.webapp.security.core.mapper.SysResourceMapper">
+
+    <select id="matchResource" resultType="long">
+        SELECT r.resource_id
+        FROM sys_resource r
+        WHERE r.status = 1
+          AND r.method = #{method}
+          AND (
+            #{path} = r.resource_path
+            OR #{path} LIKE REPLACE(r.resource_path, '**', '%')
+            OR (
+                r.resource_path LIKE '%*%'
+                AND #{path} LIKE REPLACE(r.resource_path, '*', '%')
+            )
+          )
+        ORDER BY LENGTH(r.resource_path) DESC
+        LIMIT 1
+    </select>
+
+</mapper> 

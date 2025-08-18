@@ -1,0 +1,66 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.login-card {
+  width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.social-login {
+  margin-top: 16px;
+}
+
+.social-title {
+  font-size: 14px;
+  color: #8c8c8c;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+.social-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.social-icon:hover {
+  background-color: #e6f7ff;
+}
+
+.social-icon .anticon {
+  font-size: 24px;
+}
+
+.social-icon .anticon-wechat {
+  color: #07c160;
+}
+
+.social-icon .anticon-github {
+  color: #333;
+}
+
+.social-icon .anticon-alipay-circle {
+  color: #1677ff;
+}

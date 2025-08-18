@@ -1,0 +1,15 @@
+services:
+  frontend:
+    build:
+#      context: ./ui  # 前端项目根目录（含 Dockerfile-ui、src、.env.production 等）
+      dockerfile: Dockerfile-ui  # 指定使用 Dockerfile-ui 构建
+    image: security-frontend:1.0
+    container_name: security-frontend
+    ports:
+      - "8091:8091"
+    networks:
+      - security-network
+
+networks:
+  security-network:
+    driver: bridge  # 常用的桥接网络驱动

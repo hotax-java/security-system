@@ -1,0 +1,111 @@
+# Build and Release Folders
+bin-debug/
+bin-release/
+[Oo]bj/
+[Bb]in/
+target/
+build/
+out/
+
+# 说明：Maven/Gradle 编译输出（target）、Gradle 构建目录（build）、IDEA 编译输出（out）
+
+
+# Other files and folders
+.settings/
+.classpath
+.project
+*.launch
+
+# 说明：Eclipse 相关配置（.settings、.classpath、.project、启动配置）
+
+# Other files and folders
+.settings/
+
+# Executables
+*.swf
+*.air
+*.ipa
+*.apk
+*.war
+*.ear
+
+# 说明：各类可执行文件（Flash、移动应用、Java 包等）
+
+
+# Java 编译产物
+*.class
+*.ser
+
+# 说明：编译生成的字节码（.class）、序列化文件（.ser）
+
+
+# IntelliJ IDEA 配置
+/.idea
+*.iml
+*.iws
+*.ipr
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+
+# 说明：IDEA 项目配置目录及本地配置文件
+
+
+# Maven 相关
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# 说明：Maven 构建过程临时/备份文件
+
+
+# Gradle 相关
+.gradle/
+gradle/
+gradlew.bat
+gradlew
+build.gradle
+settings.gradle
+
+# 说明：Gradle 缓存（.gradle）、Wrapper 脚本（gradlew*）、核心构建脚本（保留）
+
+
+# 日志和临时文件
+logs/
+tmp/
+temp/
+*.log
+*.tmp
+*.bak
+
+# 说明：日志目录、临时文件、备份文件
+
+
+# 系统生成文件
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# IDE 插件相关
+.idea/inspectionProfiles/
+.idea/codeStyles/
+
+# 说明：IDEA 代码检查、代码风格配置（可选提交，团队不统一则忽略）
+
+
+# 测试相关
+test-output/
+surefire-reports/
+jacoco/
+node_modules/

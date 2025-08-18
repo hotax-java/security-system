@@ -1,0 +1,49 @@
+### OpenAPI Token 获取测试
+### 测试客户端凭证授权流程
+
+### 1. 正常的token获取请求
+POST http://localhost:9010/v1/oauth2/token
+Authorization: Basic SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+
+###
+POST http://localhost:9000/v1/oauth2/introspect
+Authorization: Basic SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
+Content-Type: application/x-www-form-urlencoded
+
+token=_KgzJs-fmEbW7G-whcQ7PuFzXl-Zvt8J
+
+### 2. 测试无效的grant_type
+POST http://localhost:9000/v2/oauth2/token
+Authorization: Basic Y2wwMGI4MTU3MWQ4OTE2ZDI6MTZkYzU5ODUzNTgxZmNlNWI5MjFkMmU4OGRlN2RjYjU2ZTRiMzA1YQ==
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+
+### 3. 测试缺少Authorization头
+POST http://localhost:9000/v2/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+
+### 4. 测试无效的Basic认证格式
+POST http://localhost:9000/v2/oauth2/token
+Authorization: Basic invalid_base64
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+
+### 5. 测试不存在的appId
+POST http://localhost:9000/v2/oauth2/token
+Authorization: Basic bm90X2V4aXN0OnNlY3JldA==
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+
+### 注意：
+### - 示例中的Base64编码 Y2wwMGI4MTU3MWQ4OTE2ZDI6MTZkYzU5ODUzNTgxZmNlNWI5MjFkMmU4OGRlN2RjYjU2ZTRiMzA1YQ== 
+###   解码后为: cl00b81571d8916d2:16dc59853581fce5b921d2e88de7dcb56e4b305a
+### - 需要确保数据库中存在对应的appId和appSecret
+### - 返回格式应该为: {"access_token": "xxx", "expires_in": 7200}

@@ -1,0 +1,266 @@
+### OAuth2AuthController HTTP测试文件
+### 使用OAuth2TokenContext方式的JWT生成测试
+### clientId通过Header传递
+@baseUrl = http://localhost:8080
+### 1. OAuth2登录测试 - 成功案例
+POST {{baseUrl}}/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 2. OAuth2登录测试 - 错误用户名
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "wronguser",
+  "password": "password"
+}
+
+### 3. OAuth2登录测试 - 错误密码
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "wrongpassword"
+}
+
+### 4. OAuth2登录测试 - 空用户名
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "",
+  "password": "password"
+}
+
+### 5. OAuth2登录测试 - 空密码
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": ""
+}
+
+### 6. OAuth2登录测试 - 缺少用户名字段
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "password": "password"
+}
+
+### 7. OAuth2登录测试 - 缺少密码字段
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin"
+}
+
+### 8. OAuth2登录测试 - 无效客户端ID
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: invalid-client
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 9. OAuth2登录测试 - 缺少客户端ID Header（使用默认值）
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 10. OAuth2登出测试 - 成功案例
+# 先登录获取token，然后使用该token登出
+POST http://localhost:8080/oauth2/logout
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "accessToken": "eyJraWQiOiIyNWFlZWJhNi1hOGEyLTRiZmMtYTdmNC0yYTY5Y2E0YmY3NmIiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImF1ZCI6IndlYmFwcC1jbGllbnQiLCJuYmYiOjE3NTQxMzEzOTcsInNjb3BlIjpbInJlYWQiLCJvcGVuaWQiLCJwcm9maWxlIiwid3JpdGUiXSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwIiwiZXhwIjoxNzU0MTMxNjk3LCJpYXQiOjE3NTQxMzEzOTd9.Arak-XEIWea3k61cxXkIriQGYnBDEcSYYo6Ygq5L4jVC-_ZCcv5f4WuP9wD0mOR3u4Q4p5VAfH2cJ8x01fAwzrSs8PjIdX0XAVzeOCwah5_2naiKEMAzo5cf-nVBR7BlC3Lqj-XyGvQHyqgrTVIDcb9-B1hHv4k5Ztp04qu1XgUkPLi9q30uRE5dgWTp4YtJoUzbC8jQ0OPV7bFbM0Q6tpxMsOA00k5caCuLlkGJ2_sj7Q2a4K68LXRlLW2FB3KTwViIfe_rPLbYlP49MVNir5XP6SOes0IwzGxcyC8IsTX9iLj7Pxw4QVKn9nRxEyeFxjF88oIzBumwfspUW1PHjA"
+}
+
+### 11. OAuth2登出测试 - 无效token
+POST http://localhost:8080/oauth2/logout
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "accessToken": "invalid_token"
+}
+
+### 12. OAuth2登出测试 - 空token
+POST http://localhost:8080/oauth2/logout
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "accessToken": ""
+}
+
+### 13. OAuth2刷新令牌测试 - 成功案例
+POST http://localhost:8080/oauth2/refresh
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "refreshToken": "jpwivGwAr4MZY_4q3cm-MWuFdIPw7Kt5NYOXiskjROMjwlNhPsv32-AKnkC9P0BWh6pqCt5IL733gLoJPM06KefdcvmC1sgpM0Ki0LiBcCqzk2214JRyjB8fLif8zoF2"
+}
+
+### 14. OAuth2刷新令牌测试 - 无效refresh token
+POST http://localhost:8080/oauth2/refresh
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "refreshToken": "invalid_refresh_token"
+}
+
+### 15. OAuth2登录测试 - SQL注入防护
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin'; DROP TABLE users; --",
+  "password": "password"
+}
+
+### 16. OAuth2登录测试 - XSS防护
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "<script>alert('xss')</script>",
+  "password": "password"
+}
+
+### 17. OAuth2登录测试 - 长字符串
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "a".repeat(1000),
+  "password": "password"
+}
+
+### 18. OAuth2登录测试 - 特殊字符
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin@#$%^&*()",
+  "password": "password!@#$%^&*()"
+}
+
+### 19. OAuth2登录测试 - 中文用户名
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "管理员",
+  "password": "密码123"
+}
+
+### 20. OAuth2登录测试 - JSON格式错误
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 21. OAuth2登录测试 - 空请求体
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+### 22. OAuth2登录测试 - 非JSON请求体
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+username=admin&password=password
+
+### 23. OAuth2登录测试 - 错误Content-Type
+POST http://localhost:8080/oauth2/login
+Content-Type: text/plain
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 24. OAuth2登录测试 - 批量登录（压力测试）
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 25. OAuth2登录测试 - 连续登录
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 26. OAuth2登录测试 - 自定义Headers
+POST http://localhost:8080/oauth2/login
+Content-Type: application/json
+X-Client-Id: webapp-client
+User-Agent: OAuth2-Test-Client/1.0
+X-Request-ID: test-12345
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 27. OAuth2健康检查
+GET http://localhost:8080/oauth2/health
+
+### 使用说明：
+# 1. 将 your_access_token_here 替换为实际的访问令牌
+# 2. 将 your_refresh_token_here 替换为实际的刷新令牌
+# 3. clientId现在通过X-Client-Id Header传递
+# 4. 如果不提供X-Client-Id Header，系统将使用默认值 "webapp-client"
+# 5. 确保服务器运行在 http://localhost:8080
+
+### 注意事项：
+# - 所有OAuth2认证接口都需要通过Header传递clientId
+# - 拦截器会自动处理clientId的提取和验证
+# - 登录成功后会返回access_token和refresh_token
+# - 使用返回的token进行后续的登出和刷新操作
