@@ -1,7 +1,7 @@
 ### OAuth2AuthController HTTP测试文件
 ### 使用OAuth2TokenContext方式的JWT生成测试
 ### clientId通过Header传递
-@baseUrl = http://localhost:8080
+@baseUrl = http://localhost:8081
 ### 1. OAuth2登录测试 - 成功案例
 POST {{baseUrl}}/oauth2/login
 Content-Type: application/json
@@ -118,12 +118,12 @@ X-Client-Id: webapp-client
 }
 
 ### 13. OAuth2刷新令牌测试 - 成功案例
-POST http://localhost:8080/oauth2/refresh
+POST http://localhost:8081/oauth2/refresh
 Content-Type: application/json
 X-Client-Id: webapp-client
 
 {
-  "refreshToken": "jpwivGwAr4MZY_4q3cm-MWuFdIPw7Kt5NYOXiskjROMjwlNhPsv32-AKnkC9P0BWh6pqCt5IL733gLoJPM06KefdcvmC1sgpM0Ki0LiBcCqzk2214JRyjB8fLif8zoF2"
+  "refreshToken": "rtgbGYqBvTwrGwl27540kaC8WWv2WR9Wp4xaWryydTNP_HjfTrj5pWp0oAcJz3Iy77yOAzla1tUSevgEC6I_0hSQ1L00V5Wp3bfWA5O9EyGoFoSFiOZwopaaEyQwDnaE"
 }
 
 ### 14. OAuth2刷新令牌测试 - 无效refresh token

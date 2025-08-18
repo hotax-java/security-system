@@ -137,6 +137,9 @@ public class OAuth2Service {
                 .build();
 
         // 使用TokenGenerator生成令牌
-        return (OAuth2RefreshToken) tokenGenerator.generate(tokenContext);
+        OAuth2RefreshToken generate = (OAuth2RefreshToken) tokenGenerator.generate(tokenContext);
+        // 将令牌添加到授权构建器
+        authorizationBuilder.refreshToken(generate);
+        return generate;
     }
 }
