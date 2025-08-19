@@ -12,7 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 1.0.0
  */
 @SpringBootApplication(scanBasePackages = "com.webapp.security")
-@MapperScan({"com.webapp.security.sso.*.mapper", "com.webapp.security.core.mapper"})
+@MapperScan({"com.webapp.security.sso.mapper", "com.webapp.security.core.mapper"})
 public class SecuritySSOApplication {
     public static void main(String[] args) {
         SpringApplication.run(SecuritySSOApplication.class, args);

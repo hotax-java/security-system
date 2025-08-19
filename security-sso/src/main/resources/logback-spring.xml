@@ -110,7 +110,7 @@
     </logger>
     
     <!-- OAuth2Controller 日志 -->
-    <logger name="com.webapp.security.sso.oauth2.controller.OAuth2Controller" level="INFO" additivity="false">
+    <logger name="com.webapp.security.sso.auths.oauth2.controller.OAuth2Controller" level="INFO" additivity="false">
         <appender-ref ref="FILE_SECURITY"/>
         <appender-ref ref="CONSOLE"/>
     </logger>

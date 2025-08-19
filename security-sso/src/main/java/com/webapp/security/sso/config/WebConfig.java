@@ -1,6 +1,6 @@
 package com.webapp.security.sso.config;
 
-import com.webapp.security.sso.oauth2.interceptor.ClientIdInterceptor;
+import com.webapp.security.sso.interceptor.ClientIdInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

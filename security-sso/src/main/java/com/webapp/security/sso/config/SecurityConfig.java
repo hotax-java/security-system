@@ -5,14 +5,17 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.webapp.security.sso.api.service.ShortOpaqueTokenGenerator;
+import com.webapp.security.sso.generators.ShortOpaqueTokenGenerator;
 
+import com.webapp.security.sso.generators.OAuth2AuthorizationCodeGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.webapp.security.sso.oauth2.entity.OAuth2Jwk;
-import com.webapp.security.sso.oauth2.service.JwkService;
-import com.webapp.security.sso.oauth2.expand.OAuth2RegisteredClientService;
-import com.webapp.security.sso.oauth2.expand.UserDetailsServiceImpl;
+import com.webapp.security.sso.entity.OAuth2Jwk;
+import com.webapp.security.sso.auths.oauth2.service.JwkService;
+import com.webapp.security.sso.auths.oauth2.expand.OAuth2RegisteredClientService;
+import com.webapp.security.sso.auths.oauth2.expand.UserDetailsServiceImpl;
+import com.webapp.security.sso.auths.oauth2.expand.MyBatisOAuth2AuthorizationService;
+import com.webapp.security.sso.mapper.OAuth2AuthorizationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,20 +40,12 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import com.webapp.security.sso.oauth2.expand.MyBatisOAuth2AuthorizationService;
-import com.webapp.security.sso.oauth2.mapper.OAuth2AuthorizationMapper;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
-import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2AccessTokenGenerator;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
-import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -210,16 +205,17 @@ public class SecurityConfig {
                         OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
                 JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
                 jwtGenerator.setJwtCustomizer(jwtCustomizer);
-
+                // 创建授权码生成器
+                OAuth2AuthorizationCodeGenerator authorizationCodeGenerator = new OAuth2AuthorizationCodeGenerator();
                 OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
                 ShortOpaqueTokenGenerator shortOpaqueTokenGenerator = new ShortOpaqueTokenGenerator();
 
                 // Spring Authorization Server内置授权码生成
                 return new DelegatingOAuth2TokenGenerator(
-                        jwtGenerator,
-                        shortOpaqueTokenGenerator,
-                        refreshTokenGenerator
-                        );
+                                jwtGenerator,
+                                shortOpaqueTokenGenerator,
+                                refreshTokenGenerator,
+                                authorizationCodeGenerator);
         }
 
         /**
