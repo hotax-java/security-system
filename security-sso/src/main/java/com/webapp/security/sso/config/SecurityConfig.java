@@ -6,6 +6,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.webapp.security.sso.api.service.ShortOpaqueTokenGenerator;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.webapp.security.sso.oauth2.entity.OAuth2Jwk;
@@ -45,6 +46,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2AccessTokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
@@ -200,27 +202,24 @@ public class SecurityConfig {
         }
 
         /**
-         * OAuth2令牌生成器
+         * OAuth2令牌生成器配置
+         * 配置JWT、访问令牌、刷新令牌和短令牌生成器
          */
         @Bean
         public OAuth2TokenGenerator<?> tokenGenerator(JwtEncoder jwtEncoder,
                         OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
-                // 创建JWT令牌生成器
                 JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
-                // 注册JWT自定义器，确保权限添加到JWT中
                 jwtGenerator.setJwtCustomizer(jwtCustomizer);
-                log.info("JWT customizer registered with JwtGenerator");
 
-                // 创建短不透明令牌生成器
-                ShortOpaqueTokenGenerator shortOpaqueTokenGenerator = new ShortOpaqueTokenGenerator();
-                log.info("Created ShortOpaqueTokenGenerator for opaque tokens");
-
-                // 创建刷新令牌生成器
                 OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+                ShortOpaqueTokenGenerator shortOpaqueTokenGenerator = new ShortOpaqueTokenGenerator();
 
-                // 返回委托令牌生成器
+                // Spring Authorization Server内置授权码生成
                 return new DelegatingOAuth2TokenGenerator(
-                                jwtGenerator, shortOpaqueTokenGenerator, refreshTokenGenerator);
+                        jwtGenerator,
+                        shortOpaqueTokenGenerator,
+                        refreshTokenGenerator
+                        );
         }
 
         /**

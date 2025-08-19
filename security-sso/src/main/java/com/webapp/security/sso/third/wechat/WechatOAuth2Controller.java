@@ -121,15 +121,13 @@ public class WechatOAuth2Controller {
             );
 
             if (userId.isPresent()) {
-                // 已关联，生成userId code供前端兑换token
+                /********** OAuth2 授权码流程 - 已关联用户直接生成授权码 **********/
+                
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 生成token code并重定向到前端
-                    String tokenCode = authorizationCodeService.generateTokenCode(user.getUserId());
-                    String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
-                            .queryParam("token_code", tokenCode)
-                            .build()
-                            .toUriString();
+                    // 使用UserLoginService生成OAuth2授权码并获取重定向URL
+                    String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                            user, wechatOAuth2Config.getFrontendCallbackUrl(), "wechat_oauth2");
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)

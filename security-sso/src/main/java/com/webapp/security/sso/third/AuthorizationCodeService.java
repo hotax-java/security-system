@@ -1,5 +1,6 @@
 package com.webapp.security.sso.third;
 
+import com.alibaba.fastjson.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +20,15 @@ public class AuthorizationCodeService {
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationCodeService.class);
     
     private static final String CODE_PREFIX = "oauth2:code:";
-    private static final String TOKEN_PREFIX = "oauth2:token:code:";
+    // 注释掉token_code相关常量 - 简化第三方认证流程，直接使用标准OAuth2流程
+    // private static final String TOKEN_PREFIX = "oauth2:token:code:";
     private static final int CODE_LENGTH = 32;
     private static final int DEFAULT_EXPIRE_MINUTES = 5;
     
     private final SecureRandom secureRandom = new SecureRandom();
     
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
     
     /**
      * 生成并存储一次性code用于绑定/创建用户验证
@@ -45,7 +47,7 @@ public class AuthorizationCodeService {
         data.setPlatform(platform);
         data.setType("bind");
         
-        redisTemplate.opsForValue().set(key, data, DEFAULT_EXPIRE_MINUTES, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(key, JSON.toJSONString(data), DEFAULT_EXPIRE_MINUTES, TimeUnit.MINUTES);
         
         logger.info("生成绑定code: {}, platform: {}, 有效期: {}分钟", code, platform, DEFAULT_EXPIRE_MINUTES);
         return code;
@@ -53,12 +55,11 @@ public class AuthorizationCodeService {
     
 
     
-    /**
-     * 生成token code，用于缓存userId供前端兑换token
-     * 
-     * @param userId 用户ID
-     * @return 生成的token_code
+    /*
+     * 注释掉token_code生成方法 - 简化第三方认证流程，直接使用标准OAuth2流程
+     * 原方法用于缓存userId供前端兑换token，现在改为直接重定向到OAuth2授权端点
      */
+    /*
     public String generateTokenCode(Long userId) {
         String code = generateRandomCode();
         String key = TOKEN_PREFIX + code;
@@ -68,6 +69,7 @@ public class AuthorizationCodeService {
         logger.info("生成token code: {}, userId: {}, 有效期: {}分钟", code, userId, DEFAULT_EXPIRE_MINUTES);
         return code;
     }
+    */
     
     /**
      * 验证并获取绑定code数据（一次性使用）
@@ -79,7 +81,8 @@ public class AuthorizationCodeService {
         String key = CODE_PREFIX + "bind:" + code;
         
         try {
-            BindCodeData data = (BindCodeData) redisTemplate.opsForValue().get(key);
+            Object value = redisTemplate.opsForValue().get(key);
+            BindCodeData data = value != null ? JSON.parseObject(value.toString(), BindCodeData.class) : null;
             if (data != null) {
                 // 立即删除code（一次性使用）
                 redisTemplate.delete(key);
@@ -97,12 +100,11 @@ public class AuthorizationCodeService {
     
 
     
-    /**
-     * 验证并消费token code，返回userId（一次性使用）
-     * 
-     * @param code 要验证的token_code
-     * @return userId，如果code无效或已过期则返回null
+    /*
+     * 注释掉token_code验证方法 - 简化第三方认证流程，直接使用标准OAuth2流程
+     * 原方法用于验证并消费token_code返回userId，现在改为直接使用OAuth2标准流程
      */
+    /*
     public Long validateAndConsumeTokenCode(String code) {
         String key = TOKEN_PREFIX + code;
         
@@ -123,6 +125,7 @@ public class AuthorizationCodeService {
             return null;
         }
     }
+    */
     
     /**
      * 生成随机code

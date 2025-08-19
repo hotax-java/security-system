@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -120,15 +121,13 @@ public class AlipayOAuth2Controller {
             );
 
             if (userId.isPresent()) {
-                // 已关联，生成userId code供前端兑换token
+                /********** OAuth2 授权码流程 - 已关联用户直接生成授权码 **********/
+                
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 生成token code并重定向到前端
-                    String tokenCode = authorizationCodeService.generateTokenCode(user.getUserId());
-                    String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
-                            .queryParam("token_code", tokenCode)
-                            .build()
-                            .toUriString();
+                    // 使用UserLoginService生成OAuth2授权码并获取重定向URL
+                    String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                            user, alipayConfig.getFrontendCallbackUrl(), "alipay_oauth2");
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)

@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -141,5 +142,33 @@ public class OAuth2Service {
         // 将令牌添加到授权构建器
         authorizationBuilder.refreshToken(generate);
         return generate;
+    }
+
+    /********** OAuth2 授权码流程相关方法 **********/
+    
+    /**
+     * 生成OAuth2授权码
+     */
+    public OAuth2AuthorizationCode generateAuthorizationCode(Authentication authentication,
+            RegisteredClient registeredClient,
+            OAuth2Authorization.Builder authorizationBuilder) {
+
+        // 创建OAuth2TokenContext
+        OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
+                .registeredClient(registeredClient)
+                .principal(authentication)
+                .authorizationServerContext(createAuthorizationServerContext())
+                .tokenType(new OAuth2TokenType(OAuth2ParameterNames.CODE))
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizedScopes(registeredClient.getScopes())
+                .build();
+
+        // 使用TokenGenerator生成授权码
+        OAuth2AuthorizationCode authorizationCode = (OAuth2AuthorizationCode) tokenGenerator.generate(tokenContext);
+        
+        // 将授权码添加到授权构建器
+        authorizationBuilder.token(authorizationCode);
+        
+        return authorizationCode;
     }
 }

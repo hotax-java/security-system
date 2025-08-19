@@ -18,8 +18,11 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -54,6 +57,57 @@ public class UserLoginService {
     @Autowired
     private OAuth2AuthorizationService authorizationService;
 
+    /********** OAuth2 授权码生成方法 **********/
+    
+    /**
+     * 生成OAuth2授权码并重定向
+     * 
+     * @param user 系统用户
+     * @param frontendCallbackUrl 前端回调URL
+     * @param state OAuth2 state参数
+     * @return 重定向响应
+     */
+    public String generateAuthorizationCodeAndRedirect(SysUser user, String frontendCallbackUrl, String state) {
+        try {
+            // 获取webapp客户端配置
+            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientIdConfig.getWebappClientId());
+            
+            // 创建用户认证对象
+            UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            
+            // 创建OAuth2授权构建器
+            OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
+                    .withRegisteredClient(registeredClient)
+                    .principalName(authentication.getName())
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizedScopes(registeredClient.getScopes());
+            
+            // 生成OAuth2授权码
+            OAuth2AuthorizationCode authorizationCode = oAuth2Service.generateAuthorizationCode(
+                    authentication, registeredClient, authorizationBuilder);
+            
+            // 保存授权信息
+            OAuth2Authorization authorization = authorizationBuilder.build();
+            authorizationService.save(authorization);
+            
+            // 构建重定向URL
+            return UriComponentsBuilder.fromUriString(frontendCallbackUrl)
+                    .queryParam("code", authorizationCode.getTokenValue())
+                    .queryParam("state", state)
+                    .build()
+                    .toUriString();
+                    
+        } catch (Exception e) {
+            logger.error("生成OAuth2授权码失败", e);
+            throw new RuntimeException("生成授权码失败: " + e.getMessage());
+        }
+    }
+    
+    /********** Token 生成相关方法 **********/
+    
     /**
      * 生成用户令牌
      * 

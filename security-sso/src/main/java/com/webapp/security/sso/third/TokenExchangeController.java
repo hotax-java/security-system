@@ -1,3 +1,24 @@
+import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.model.OAuth2ErrorResponse;
+import com.webapp.security.core.service.SysUserService;
+import com.webapp.security.sso.third.AuthorizationCodeService;
+import com.webapp.security.sso.third.UserLoginService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+/*
+ * 注释掉整个TokenExchangeController - 简化第三方认证流程，直接使用标准OAuth2流程
+ * 原控制器用于前端通过token_code换取token信息，现在改为直接使用标准/oauth2/token端点
+ * 这样可以避免自定义的token交换机制，统一使用OAuth2标准流程
+ */
+/*
 package com.webapp.security.sso.third;
 
 import com.webapp.security.core.entity.SysUser;
@@ -12,10 +33,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * Token换取控制器
- * 用于前端通过code换取token信息
- */
+
 @RestController
 @RequestMapping("/oauth2/token")
 public class TokenExchangeController {
@@ -30,13 +48,7 @@ public class TokenExchangeController {
     
     @Autowired
     private SysUserService sysUserService;
-    
-    /**
-     * 通过token_code换取token信息
-     * 
-     * @param code token_code（原参数名保持不变以兼容前端）
-     * @return token信息
-     */
+
     @PostMapping("/exchange")
     public ResponseEntity<?> exchangeToken(@RequestParam("code") String code) {
         try {
@@ -79,3 +91,4 @@ public class TokenExchangeController {
         }
     }
 }
+*/
