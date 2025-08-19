@@ -6,8 +6,7 @@ import com.webapp.security.core.service.SysGithubUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.UserLoginService;
 import com.webapp.security.sso.third.github.GitHubUserService.GitHubUserInfo;
-import com.webapp.security.sso.service.RedisCodeService;
-import lombok.Data;
+import com.webapp.security.sso.third.RedisCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 

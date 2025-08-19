@@ -1,4 +1,4 @@
-package com.webapp.security.sso.service;
+package com.webapp.security.sso.third;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,7 +1,6 @@
-package com.webapp.security.sso.controller;
+package com.webapp.security.sso.third;
 
 import com.webapp.security.core.model.OAuth2ErrorResponse;
-import com.webapp.security.sso.service.RedisCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -7,9 +7,8 @@ import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
 import com.webapp.security.sso.third.UserLoginService;
 import com.webapp.security.sso.third.wechat.WechatUserService.WechatUserInfo;
-import com.webapp.security.sso.service.RedisCodeService;
+import com.webapp.security.sso.third.RedisCodeService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +25,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.*;
 
 /**
@@ -150,17 +148,18 @@ public class WechatOAuth2Controller {
                         .build();
             } else {
                 // 未关联，生成绑定code并重定向到前端选择页面
-            String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
-            String bindCode = redisCodeService.generateBindCode(encryptedOpenId, "wechat");
+                String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
+                String bindCode = redisCodeService.generateBindCode(encryptedOpenId, "wechat");
 
-            // 重定向到前端，附带必要的参数
-            String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
-                    .queryParam("platform", "wechat")
-                    .queryParam("code", bindCode)
-                    .queryParam("nickname", URLEncoder.encode(userInfo.getNickname(), StandardCharsets.UTF_8.name()))
-                    .queryParam("headimgurl", userInfo.getHeadimgurl())
-                    .build()
-                    .toUriString();
+                // 重定向到前端，附带必要的参数
+                String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                        .queryParam("platform", "wechat")
+                        .queryParam("code", bindCode)
+                        .queryParam("nickname",
+                                URLEncoder.encode(userInfo.getNickname(), StandardCharsets.UTF_8.name()))
+                        .queryParam("headimgurl", userInfo.getHeadimgurl())
+                        .build()
+                        .toUriString();
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .header(HttpHeaders.LOCATION, redirectUrl)
@@ -194,7 +193,8 @@ public class WechatOAuth2Controller {
             // 验证并消费绑定code
             RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"wechat".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
 
             // 解密OpenID
@@ -203,11 +203,13 @@ public class WechatOAuth2Controller {
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
             if (user == null) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
-            if (!passwordEncoder.matches(password, user.getPassword())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+            if (!userLoginService.verifyPassword(password, user.getPassword())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             // 绑定账号
@@ -220,7 +222,8 @@ public class WechatOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("绑定微信账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -230,6 +233,8 @@ public class WechatOAuth2Controller {
     @PostMapping("/create")
     public ResponseEntity<?> createNewAccount(
             @RequestParam String code,
+            @RequestParam String username,
+            @RequestParam String password,
             @RequestParam(required = false) String nickname,
             @RequestParam(required = false) String headimgurl) {
 
@@ -237,22 +242,19 @@ public class WechatOAuth2Controller {
             // 验证并消费绑定code
             RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"wechat".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
 
             // 解密OpenID
             String openid = decryptOpenId(bindData.getEncryptedId());
 
             // 创建新用户
-            SysUser user = new SysUser();
-            user.setUsername("wx_" + openid.substring(0, 8)); // 生成唯一用户名
-            // 设置用户信息
-            user.setRealName(nickname != null ? nickname : "微信用户");
-            user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // 随机密码
-            user.setStatus(1); // 1表示启用
-
-            // 创建用户
-            sysUserService.save(user);
+            SysUser user = userLoginService.createUser(
+                    username,
+                    password,
+                    null, // email
+                    nickname != null ? nickname : "微信用户");
 
             // 绑定微信账号
             SysWechatUser wechatUser = sysWechatUserService.bindWechatToUser(
@@ -264,11 +266,10 @@ public class WechatOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("创建新账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-
 
     /**
      * 加密OpenID

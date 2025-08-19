@@ -6,8 +6,7 @@ import com.webapp.security.core.service.SysAlipayUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.alipay.AlipayUserService.AlipayUserInfo;
 import com.webapp.security.sso.third.UserLoginService;
-import com.webapp.security.sso.service.RedisCodeService;
-import lombok.Data;
+import com.webapp.security.sso.third.RedisCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +23,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -183,14 +181,14 @@ public class AlipayOAuth2Controller {
             @RequestParam("password") String password) {
 
         try {
-            // 通过code获取加密的支付宝用户ID
-            String encryptedAlipayUserId = redisCodeService.verifyAndConsumeBindCode(code);
-            if (encryptedAlipayUserId == null) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "验证码无效或已过期", HttpStatus.BAD_REQUEST);
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
             }
             
             // 解密支付宝用户ID
-            String alipayUserId = decryptAlipayUserId(encryptedAlipayUserId);
+            String alipayUserId = decryptAlipayUserId(bindData.getEncryptedId());
 
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
@@ -228,14 +226,14 @@ public class AlipayOAuth2Controller {
             @RequestParam(required = false) String headimgurl) {
 
         try {
-            // 通过code获取加密的支付宝用户ID
-            String encryptedAlipayUserId = redisCodeService.verifyAndConsumeBindCode(code);
-            if (encryptedAlipayUserId == null) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "验证码无效或已过期", HttpStatus.BAD_REQUEST);
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
             }
             
             // 解密支付宝用户ID
-            String alipayUserId = decryptAlipayUserId(encryptedAlipayUserId);
+            String alipayUserId = decryptAlipayUserId(bindData.getEncryptedId());
 
             // 创建新用户
             SysUser user = userLoginService.createUser(
