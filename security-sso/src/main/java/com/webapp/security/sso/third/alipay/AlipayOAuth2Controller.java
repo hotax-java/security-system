@@ -6,6 +6,7 @@ import com.webapp.security.core.service.SysAlipayUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.alipay.AlipayUserService.AlipayUserInfo;
 import com.webapp.security.sso.third.UserLoginService;
+import com.webapp.security.sso.service.RedisCodeService;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,9 @@ public class AlipayOAuth2Controller {
 
     @Autowired
     private SysAlipayUserService sysAlipayUserService;
+
+    @Autowired
+    private RedisCodeService redisCodeService;
 
     /**
      * 重定向到支付宝授权页面
@@ -124,13 +128,10 @@ public class AlipayOAuth2Controller {
                     // 生成访问令牌
                     Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
 
-                    // 重定向到前端应用，并附带令牌
+                    // 生成token code并重定向到前端
+                    String tokenCode = redisCodeService.generateTokenCode(tokenInfo);
                     String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
-                            .queryParam("access_token", tokenInfo.get("access_token"))
-                            .queryParam("token_type", tokenInfo.get("token_type"))
-                            .queryParam("expires_in", tokenInfo.get("expires_in"))
-                            .queryParam("refresh_token", tokenInfo.get("refresh_token"))
-                            .queryParam("username", tokenInfo.get("username"))
+                            .queryParam("token_code", tokenCode)
                             .build()
                             .toUriString();
 
@@ -140,13 +141,14 @@ public class AlipayOAuth2Controller {
                 }
             }
 
-            // 未关联，返回选择页面，加密支付宝用户ID
+            // 未关联，生成绑定code并重定向到前端选择页面
             String encryptedAlipayUserId = encryptAlipayUserId(alipayUser.getUserId());
+            String bindCode = redisCodeService.generateBindCode(encryptedAlipayUserId, "alipay");
 
             // 重定向到前端，附带必要的参数
             String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
                     .queryParam("platform", "alipay")
-                    .queryParam("encryptedOpenId", encryptedAlipayUserId)
+                    .queryParam("code", bindCode)
                     .queryParam("nickname", URLEncoder.encode(alipayUser.getNickName(), StandardCharsets.UTF_8.name()))
                     .queryParam("headimgurl", alipayUser.getAvatar())
                     .build()
@@ -176,11 +178,17 @@ public class AlipayOAuth2Controller {
      */
     @PostMapping("/bind")
     public ResponseEntity<?> bindExistingUser(
-            @RequestParam("encryptedOpenId") String encryptedAlipayUserId,
+            @RequestParam("code") String code,
             @RequestParam("username") String username,
             @RequestParam("password") String password) {
 
         try {
+            // 通过code获取加密的支付宝用户ID
+            String encryptedAlipayUserId = redisCodeService.verifyAndConsumeBindCode(code);
+            if (encryptedAlipayUserId == null) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "验证码无效或已过期", HttpStatus.BAD_REQUEST);
+            }
+            
             // 解密支付宝用户ID
             String alipayUserId = decryptAlipayUserId(encryptedAlipayUserId);
 
@@ -213,13 +221,19 @@ public class AlipayOAuth2Controller {
      */
     @PostMapping("/create")
     public ResponseEntity<?> createNewAccount(
-            @RequestParam("encryptedOpenId") String encryptedAlipayUserId,
+            @RequestParam("code") String code,
             @RequestParam("username") String username,
             @RequestParam("password") String password,
             @RequestParam(required = false) String nickname,
             @RequestParam(required = false) String headimgurl) {
 
         try {
+            // 通过code获取加密的支付宝用户ID
+            String encryptedAlipayUserId = redisCodeService.verifyAndConsumeBindCode(code);
+            if (encryptedAlipayUserId == null) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "验证码无效或已过期", HttpStatus.BAD_REQUEST);
+            }
+            
             // 解密支付宝用户ID
             String alipayUserId = decryptAlipayUserId(encryptedAlipayUserId);
 

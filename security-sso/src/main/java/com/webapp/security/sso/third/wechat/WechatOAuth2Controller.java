@@ -7,6 +7,7 @@ import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
 import com.webapp.security.sso.third.UserLoginService;
 import com.webapp.security.sso.third.wechat.WechatUserService.WechatUserInfo;
+import com.webapp.security.sso.service.RedisCodeService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.Data;
 import org.slf4j.Logger;
@@ -62,6 +63,9 @@ public class WechatOAuth2Controller {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RedisCodeService redisCodeService;
 
     /**
      * 发起微信授权请求
@@ -125,13 +129,10 @@ public class WechatOAuth2Controller {
                     // 生成访问令牌
                     Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
 
-                    // 重定向到前端应用，并附带令牌
+                    // 生成token code并重定向到前端
+                    String tokenCode = redisCodeService.generateTokenCode(tokenInfo);
                     String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
-                            .queryParam("access_token", tokenInfo.get("access_token"))
-                            .queryParam("token_type", tokenInfo.get("token_type"))
-                            .queryParam("expires_in", tokenInfo.get("expires_in"))
-                            .queryParam("refresh_token", tokenInfo.get("refresh_token"))
-                            .queryParam("username", tokenInfo.get("username"))
+                            .queryParam("token_code", tokenCode)
                             .build()
                             .toUriString();
 
@@ -148,17 +149,18 @@ public class WechatOAuth2Controller {
                         .header(HttpHeaders.LOCATION, errorUrl)
                         .build();
             } else {
-                // 未关联，返回选择页面，加密OpenID
-                String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
+                // 未关联，生成绑定code并重定向到前端选择页面
+            String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
+            String bindCode = redisCodeService.generateBindCode(encryptedOpenId, "wechat");
 
-                // 重定向到前端，附带必要的参数
-                String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
-                        .queryParam("platform", "wechat")
-                        .queryParam("encryptedOpenId", encryptedOpenId)
-                        .queryParam("nickname", URLEncoder.encode(userInfo.getNickname(), StandardCharsets.UTF_8.name()))
-                        .queryParam("headimgurl", userInfo.getHeadimgurl())
-                        .build()
-                        .toUriString();
+            // 重定向到前端，附带必要的参数
+            String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                    .queryParam("platform", "wechat")
+                    .queryParam("code", bindCode)
+                    .queryParam("nickname", URLEncoder.encode(userInfo.getNickname(), StandardCharsets.UTF_8.name()))
+                    .queryParam("headimgurl", userInfo.getHeadimgurl())
+                    .build()
+                    .toUriString();
 
                 return ResponseEntity.status(HttpStatus.FOUND)
                         .header(HttpHeaders.LOCATION, redirectUrl)
@@ -186,11 +188,17 @@ public class WechatOAuth2Controller {
     public ResponseEntity<?> bindExistingAccount(
             @RequestParam String username,
             @RequestParam String password,
-            @RequestParam String encryptedOpenId) {
+            @RequestParam String code) {
 
         try {
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"wechat".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+            }
+
             // 解密OpenID
-            String openid = decryptOpenId(encryptedOpenId);
+            String openid = decryptOpenId(bindData.getEncryptedId());
 
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
@@ -221,13 +229,19 @@ public class WechatOAuth2Controller {
      */
     @PostMapping("/create")
     public ResponseEntity<?> createNewAccount(
-            @RequestParam String encryptedOpenId,
+            @RequestParam String code,
             @RequestParam(required = false) String nickname,
             @RequestParam(required = false) String headimgurl) {
 
         try {
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"wechat".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+            }
+
             // 解密OpenID
-            String openid = decryptOpenId(encryptedOpenId);
+            String openid = decryptOpenId(bindData.getEncryptedId());
 
             // 创建新用户
             SysUser user = new SysUser();

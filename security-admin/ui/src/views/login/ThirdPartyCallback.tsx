@@ -30,14 +30,13 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   useEffect(() => {
     // 解析URL中的参数
     const params = new URLSearchParams(location.search);
-    const token = params.get('access_token');
+    const tokenCode = params.get('token_code');
+    const bindCode = params.get('code');
     const errorMsg = params.get('error');
-    const encryptedOpenId = params.get('encryptedOpenId');
     const nickname = params.get('nickname');
     const headimgurl = params.get('headimgurl');
-    const code = params.get('code');
+    const oauthCode = params.get('code');
     const state = params.get('state');
-    const username = params.get('username');
     
     // 从URL参数中获取平台信息
     const platformParam = params.get('platform') as 'github' | 'wechat' | 'alipay' | '';
@@ -50,32 +49,16 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       return;
     }
     
-    // 处理已有token的情况（已绑定用户）
-    if (token) {
-      // 从URL参数中获取完整的token信息
-      const accessToken = params.get('access_token') || token;
-      const refreshToken = params.get('refresh_token');
-      const expiresIn = params.get('expires_in');
-      
-      // 解析过期时间，确保它是一个数字
-      let validExpiresIn = expiresIn ? parseInt(expiresIn, 10) : undefined;
-      
-      // 使用TokenManager保存完整的token信息
-      TokenManager.saveTokens(accessToken, refreshToken || undefined, validExpiresIn);
-      
-      // 调用登录回调
-      onLogin({ username: username }, accessToken);
-      
-      // 跳转到首页
-      navigate('/dashboard');
-      message.success('登录成功');
+    // 处理已绑定用户的情况（通过token_code换取token）
+    if (tokenCode) {
+      exchangeTokenWithCode(tokenCode);
       return;
     }
     
-    // 处理未绑定用户的情况（后端已经处理过OAuth回调）
-    if (encryptedOpenId && nickname) {
+    // 处理未绑定用户的情况（通过code获取绑定信息）
+    if (bindCode && platformParam && nickname) {
       setThirdPartyData({
-        encryptedId: encryptedOpenId,
+        bindCode: bindCode,
         nickname: nickname,
         avatarUrl: headimgurl || ''
       });
@@ -84,9 +67,9 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
     }
     
     // 处理OAuth回调的情况（code + state）
-    if (code && state) {
+    if (oauthCode && state && !platformParam) {
       // 获取第三方用户数据
-      redirectToBackend(platformParam || '', code, state);
+      redirectToBackend('', oauthCode, state);
       return;
     }
     
@@ -94,6 +77,29 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
     setError('回调参数不完整，请重新登录');
     setLoading(false);
   }, [location.search, location.pathname]);
+
+  // 通过token_code换取token信息
+  const exchangeTokenWithCode = async (tokenCode: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await axios.post(`${API_BASE_URL}/oauth2/token/exchange`, 
+        new URLSearchParams({ code: tokenCode })
+      );
+      
+      if (response.data && response.data.success) {
+        const tokenData = response.data.data;
+        handleLoginSuccess(tokenData);
+      } else {
+        setError(response.data.message || 'Token换取失败');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Token换取失败:', error);
+      setError(error.response?.data?.message || 'Token换取失败');
+      setLoading(false);
+    }
+  };
 
   const redirectToBackend = async (platform: string, code: string, state: string) => {
     try {
@@ -178,13 +184,8 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       // 调用绑定已有账号接口
       const params = new URLSearchParams();
       
-      // 根据平台设置不同的参数名
-      if (platform === 'github') {
-        params.append('encryptedGithubId', thirdPartyData.encryptedId);
-      } else {
-        params.append('encryptedOpenId', thirdPartyData.encryptedId);
-      }
-      
+      // 使用统一的code参数
+      params.append('code', thirdPartyData.bindCode);
       params.append('username', values.username);
       params.append('password', values.password);
       
@@ -245,13 +246,8 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       // 调用创建新账号接口
       const params = new URLSearchParams();
       
-      // 根据平台设置不同的参数名
-      if (platform === 'github') {
-        params.append('encryptedGithubId', thirdPartyData.encryptedId);
-      } else {
-        params.append('encryptedOpenId', thirdPartyData.encryptedId);
-      }
-      
+      // 使用统一的code参数
+      params.append('code', thirdPartyData.bindCode);
       params.append('username', values.username);
       params.append('password', values.password);
       

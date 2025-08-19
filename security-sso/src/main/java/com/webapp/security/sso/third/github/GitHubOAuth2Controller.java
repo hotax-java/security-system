@@ -6,6 +6,7 @@ import com.webapp.security.core.service.SysGithubUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.UserLoginService;
 import com.webapp.security.sso.third.github.GitHubUserService.GitHubUserInfo;
+import com.webapp.security.sso.service.RedisCodeService;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,9 @@ public class GitHubOAuth2Controller {
 
     @Autowired
     private GitHubOAuth2Config gitHubOAuth2Config;
+
+    @Autowired
+    private RedisCodeService redisCodeService;
 
     /**
      * 重定向到GitHub授权页面
@@ -125,13 +129,10 @@ public class GitHubOAuth2Controller {
                     // 生成访问令牌
                     Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
 
-                    // 重定向到前端应用，并附带令牌
+                    // 生成token code并重定向到前端
+                    String tokenCode = redisCodeService.generateTokenCode(tokenInfo);
                     String redirectUrl = UriComponentsBuilder.fromUriString(gitHubOAuth2Config.getFrontendCallbackUrl())
-                            .queryParam("access_token", tokenInfo.get("access_token"))
-                            .queryParam("token_type", tokenInfo.get("token_type"))
-                            .queryParam("expires_in", tokenInfo.get("expires_in"))
-                            .queryParam("refresh_token", tokenInfo.get("refresh_token"))
-                            .queryParam("username", tokenInfo.get("username"))
+                            .queryParam("token_code", tokenCode)
                             .build()
                             .toUriString();
 
@@ -141,13 +142,14 @@ public class GitHubOAuth2Controller {
                 }
             }
 
-            // 未关联，返回选择页面，加密GitHub ID
+            // 未关联，生成绑定code并重定向到前端选择页面
             String encryptedGithubId = encryptGithubId(githubUser.getId().toString());
+            String bindCode = redisCodeService.generateBindCode(encryptedGithubId, "github");
 
             // 重定向到前端，附带必要的参数
             String redirectUrl = UriComponentsBuilder.fromUriString(gitHubOAuth2Config.getFrontendCallbackUrl())
                     .queryParam("platform", "github")
-                    .queryParam("encryptedOpenId", encryptedGithubId)
+                    .queryParam("code", bindCode)
                     .queryParam("nickname", URLEncoder.encode(githubUser.getLogin(), StandardCharsets.UTF_8.name()))
                     .queryParam("headimgurl", githubUser.getAvatarUrl())
                     .build()
@@ -177,13 +179,19 @@ public class GitHubOAuth2Controller {
      */
     @PostMapping("/bind")
     public ResponseEntity<?> bindExistingUser(
-            @RequestParam("encryptedGithubId") String encryptedGithubId,
+            @RequestParam("code") String code,
             @RequestParam("username") String username,
             @RequestParam("password") String password) {
 
         try {
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"github".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+            }
+
             // 解密GitHub ID
-            String githubIdStr = decryptGithubId(encryptedGithubId);
+            String githubIdStr = decryptGithubId(bindData.getEncryptedId());
             Long githubId = Long.parseLong(githubIdStr);
 
             // 验证用户名密码
@@ -214,15 +222,21 @@ public class GitHubOAuth2Controller {
      */
     @PostMapping("/create")
     public ResponseEntity<?> createAndBindUser(
-            @RequestParam("encryptedGithubId") String encryptedGithubId,
+            @RequestParam("code") String code,
             @RequestParam("username") String username,
             @RequestParam("password") String password,
             @RequestParam(required = false) String nickname,
             @RequestParam(required = false) String headimgurl) {
 
         try {
+            // 验证并消费绑定code
+            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            if (bindData == null || !"github".equals(bindData.getPlatform())) {
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+            }
+
             // 解密GitHub ID
-            String githubIdStr = decryptGithubId(encryptedGithubId);
+            String githubIdStr = decryptGithubId(bindData.getEncryptedId());
             Long githubId = Long.parseLong(githubIdStr);
 
             // 创建新用户
