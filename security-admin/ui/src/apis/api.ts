@@ -50,8 +50,10 @@ export const businessApi: AxiosInstance = axios.create({
  * 检查token是否有效，无效则尝试刷新
  */
 const requestInterceptor = async (config: any) => {
-  // 如果是认证API的请求，直接返回配置
-  if (config._isAuthApi) {
+  // 检查是否为认证API请求或以/api/oauth2开头的路径
+  if (config._isAuthApi || (config.url && config.url.startsWith('/api/oauth2'))) {
+    // 标记为认证API请求
+    config._isAuthApi = true;
     return config;
   }
   
@@ -137,15 +139,19 @@ const responseErrorInterceptor = async (error: any) => {
   // 获取原始请求配置
   const originalRequest = error.config;
   
+  // 检查请求URL是否以/api/oauth2开头
+  const isOAuth2Request = originalRequest && originalRequest.url && 
+                        originalRequest.url.startsWith('/api/oauth2');
+  
   // 处理HTTP错误
   if (error.response) {
     const { status } = error.response;
 
     // 处理401错误 - 未授权
     if (status === 401) {
-      // 如果是认证API的请求，不进行刷新尝试
-      if (originalRequest._isAuthApi) {
-        console.log('Auth API request unauthorized (401), redirecting to login page');
+      // 如果是认证API的请求或OAuth2请求，不进行刷新尝试
+      if (originalRequest._isAuthApi || isOAuth2Request) {
+        console.log('Auth API/OAuth2 request unauthorized (401), redirecting to login page');
         TokenManager.clearTokens();
         window.location.replace('/login'); // 使用replace防止历史记录问题
         return Promise.reject(error);

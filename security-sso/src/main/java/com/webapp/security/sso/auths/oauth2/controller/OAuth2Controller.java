@@ -60,9 +60,6 @@ public class OAuth2Controller {
         try {
             // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
-            if (clientId == null || clientId.trim().isEmpty()) {
-                clientId = clientIdConfig.getWebappClientId();
-            }
             log.info("OAuth2 login attempt for user: {}, clientId: {}", loginRequest.getUsername(), clientId);
 
             // 1. 获取注册的客户端
@@ -140,9 +137,6 @@ public class OAuth2Controller {
         try {
             // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
-            if (clientId == null || clientId.trim().isEmpty()) {
-                clientId = clientIdConfig.getWebappClientId();
-            }
             String accessToken = logoutRequest.getAccessToken();
 
             if (accessToken == null || accessToken.trim().isEmpty()) {
@@ -212,9 +206,6 @@ public class OAuth2Controller {
             String refreshTokenValue = refreshTokenRequest.getRefreshToken();
             // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
-            if (clientId == null || clientId.trim().isEmpty()) {
-                clientId = clientIdConfig.getWebappClientId();
-            }
 
             // 1. 验证请求参数
             if (refreshTokenValue == null || refreshTokenValue.trim().isEmpty()) {

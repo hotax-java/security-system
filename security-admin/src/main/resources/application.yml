@@ -39,10 +39,23 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${ISSUER_URI:http://127.0.0.1:9000}
+      client:
+        registration:
+          webapp-client:
+            client-id: webapp-client
+            client-secret: webapp-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/oauth2/callback"
+            scope: read,write
+        provider:
+          webapp-client:
+            issuer-uri: ${ISSUER_URI:http://127.0.0.1:9000}
+            token-uri: ${ISSUER_URI:http://127.0.0.1:9000}/oauth2/token
 
 # 日志配置
 logging:
   level:
-    com.webapp.security: DEBUG
-    org.springframework.security: DEBUG
+    root: INFO
+    com.webapp: DEBUG
+    org.springframework.security: INFO
     com.baomidou.mybatisplus: DEBUG

@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.webapp.security.sso.auths.oauth2.expand.MybatisOAuth2RegisteredClientService;
 import com.webapp.security.sso.generators.ShortOpaqueTokenGenerator;
 
 import com.webapp.security.sso.generators.OAuth2AuthorizationCodeGenerator;
@@ -12,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.webapp.security.sso.entity.OAuth2Jwk;
 import com.webapp.security.sso.auths.oauth2.service.JwkService;
-import com.webapp.security.sso.auths.oauth2.expand.OAuth2RegisteredClientService;
 import com.webapp.security.sso.auths.oauth2.expand.UserDetailsServiceImpl;
 import com.webapp.security.sso.auths.oauth2.expand.MyBatisOAuth2AuthorizationService;
 import com.webapp.security.sso.mapper.OAuth2AuthorizationMapper;
@@ -61,7 +61,7 @@ public class SecurityConfig {
         private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
         private final UserDetailsServiceImpl userDetailsService;
-        private final OAuth2RegisteredClientService registeredClientService;
+        private final MybatisOAuth2RegisteredClientService registeredClientService;
         private final JwkService jwkService;
 
         /**

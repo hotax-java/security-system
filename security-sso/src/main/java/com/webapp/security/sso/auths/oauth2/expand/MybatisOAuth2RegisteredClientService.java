@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class OAuth2RegisteredClientService implements RegisteredClientRepository {
+public class MybatisOAuth2RegisteredClientService implements RegisteredClientRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(OAuth2RegisteredClientService.class);
+    private static final Logger log = LoggerFactory.getLogger(MybatisOAuth2RegisteredClientService.class);
 
     private final OAuth2RegisteredClientMapper clientMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();

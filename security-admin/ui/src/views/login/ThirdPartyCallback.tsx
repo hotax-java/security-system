@@ -1,16 +1,12 @@
-import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, Tabs, message, Spin, Typography, Avatar } from 'antd';
-import { UserOutlined, LockOutlined, GithubOutlined, WechatOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Card, message, Spin, Typography, Avatar, Button } from 'antd';
+import { UserOutlined, GithubOutlined, WechatOutlined } from '@ant-design/icons';
+import { businessApi } from '../../apis/api';
 import { TokenManager } from '../../services/tokenManager';
 import ErrorPage from './ErrorPage';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
-
-// API基础URL
-const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'http://localhost:9000';
 
 interface ThirdPartyCallbackProps {
   onLogin: (userData: any, token: string) => void;
@@ -24,10 +20,11 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   const [platform, setPlatform] = useState<'github' | 'wechat' | 'alipay' | ''>('');
 
   useEffect(() => {
-    // 解析URL中的参数
+    // 解析URL参数
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
     const state = params.get('state');
+    const clientId = params.get('clientId') || '';
     
     if (!code) {
       setError('授权码不存在，请重新登录');
@@ -39,27 +36,23 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       setPlatform(state as 'github' | 'wechat' | 'alipay' | '');
     }
     
-    // 使用授权码获取token
-    exchangeTokenWithCode(code);
+    // 通过后端代理获取token
+    exchangeTokenWithCode(code, clientId);
   }, [location.search]);
 
-  // 使用授权码获取token
-  const exchangeTokenWithCode = async (code: string) => {
+  // 通过Admin后端代理获取token
+  const exchangeTokenWithCode = async (code: string, clientId: string) => {
     try {
       setLoading(true);
       
-      const response = await axios.post(`${API_BASE_URL}/oauth2/token`, 
-        new URLSearchParams({ 
-          code: code,
-          grant_type: 'authorization_code',
-          client_id: 'webapp-client',
-          redirect_uri: window.location.origin + '/oauth2/callback'
-        })
-      );
+      // 使用authApi调用后端代理接口
+      const response = await businessApi.post('/api/oauth2/token', {
+          code: code, clientId: clientId,
+          redirectUri: window.location.origin + '/oauth2/callback'
+      });
       
-      if (response.data) {
-        const tokenData = response.data;
-        handleLoginSuccess(tokenData);
+      if (response.data && response.data.access_token) {
+        handleLoginSuccess(response.data);
       } else {
         setError('Token获取失败');
         setLoading(false);

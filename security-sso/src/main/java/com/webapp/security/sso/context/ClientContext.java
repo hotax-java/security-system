@@ -1,7 +1,9 @@
 package com.webapp.security.sso.context;
 
+import com.webapp.security.core.config.ClientIdConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 客户端上下文管理
@@ -10,11 +12,6 @@ import org.slf4j.LoggerFactory;
 public class ClientContext {
     
     private static final Logger log = LoggerFactory.getLogger(ClientContext.class);
-    
-    /**
-     * 默认客户端ID
-     */
-    public static final String DEFAULT_CLIENT_ID = "webapp-client";
     
     /**
      * ThreadLocal存储当前线程的clientId
@@ -27,10 +24,6 @@ public class ClientContext {
      * @param clientId 客户端ID
      */
     public static void setClientId(String clientId) {
-        if (clientId == null || clientId.trim().isEmpty()) {
-            clientId = DEFAULT_CLIENT_ID;
-            log.debug("ClientId is null or empty, using default: {}", clientId);
-        }
         CLIENT_ID_HOLDER.set(clientId.trim());
         log.debug("Set clientId for current thread: {}", clientId);
     }
@@ -40,12 +33,7 @@ public class ClientContext {
      * 
      * @return 客户端ID，如果未设置则返回默认�?     */
     public static String getClientId() {
-        String clientId = CLIENT_ID_HOLDER.get();
-        if (clientId == null) {
-            clientId = DEFAULT_CLIENT_ID;
-            log.debug("No clientId found in current thread, using default: {}", clientId);
-        }
-        return clientId;
+        return CLIENT_ID_HOLDER.get();
     }
     
     /**

@@ -12,7 +12,7 @@ class DashboardFacadeTest {
     private BCryptPasswordEncoder passwordEncoder;
     @Test
     void getDashboardInfo() {
-        String encode = passwordEncoder.encode("IPSG-YbDDJ4C_tscD-OuYfrfSmVW8UKV");
+        String encode = passwordEncoder.encode("webapp-secret");
         System.out.println("passwordEncoder: -> " + encode);
     }
 }

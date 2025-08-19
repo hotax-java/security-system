@@ -46,8 +46,7 @@ public class UserLoginService {
     @Autowired
     private OAuth2Service oAuth2Service;
 
-    @Autowired
-    private ClientIdConfig clientIdConfig;
+
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -66,8 +65,9 @@ public class UserLoginService {
      */
     public String generateAuthorizationCodeAndRedirect(SysUser user, String frontendCallbackUrl, String state) {
         try {
+
             // 获取webapp客户端配置
-            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientIdConfig.getWebappClientId());
+            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(ClientContext.getClientId());
             
             // 创建用户认证对象
             UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
@@ -94,6 +94,7 @@ public class UserLoginService {
             return UriComponentsBuilder.fromUriString(frontendCallbackUrl)
                     .queryParam("code", authorizationCode.getTokenValue())
                     .queryParam("state", state)
+                    .queryParam("clientId",  ClientContext.getClientId())
                     .build()
                     .toUriString();
                     
@@ -113,9 +114,6 @@ public class UserLoginService {
      */
     public Map<String, Object> generateUserToken(SysUser user) {
         String clientId = ClientContext.getClientId();
-        if (clientId == null || clientId.trim().isEmpty()) {
-            clientId = clientIdConfig.getWebappClientId();
-        }
         // 获取客户端
         RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
         String username = user.getUsername();
