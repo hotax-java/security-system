@@ -1,12 +1,16 @@
 package com.webapp.security.sso.third;
 
+import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.model.OAuth2ErrorResponse;
+import com.webapp.security.core.service.SysUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /**
  * Token换取控制器
@@ -19,22 +23,28 @@ public class TokenExchangeController {
     private static final Logger logger = LoggerFactory.getLogger(TokenExchangeController.class);
     
     @Autowired
-    private RedisCodeService redisCodeService;
+    private AuthorizationCodeService authorizationCodeService;
+    
+    @Autowired
+    private UserLoginService userLoginService;
+    
+    @Autowired
+    private SysUserService sysUserService;
     
     /**
-     * 通过code换取token信息
+     * 通过user_code换取token信息
      * 
-     * @param code 一次性code
+     * @param code 用户code（原参数名保持不变以兼容前端）
      * @return token信息
      */
     @PostMapping("/exchange")
     public ResponseEntity<?> exchangeToken(@RequestParam("code") String code) {
         try {
-            // 验证并消费code
-            Object tokenInfo = redisCodeService.validateAndConsumeTokenCode(code);
+            // 验证并消费user code
+            Long userId = authorizationCodeService.validateAndConsumeUserCode(code);
             
-            if (tokenInfo == null) {
-                logger.warn("无效的token code: {}", code);
+            if (userId == null) {
+                logger.warn("无效的user code: {}", code);
                 return OAuth2ErrorResponse.error(
                     OAuth2ErrorResponse.INVALID_GRANT, 
                     "无效的code或code已过期", 
@@ -42,7 +52,21 @@ public class TokenExchangeController {
                 );
             }
             
-            logger.info("成功通过code换取token: {}", code);
+            // 根据userId获取用户信息
+            SysUser user = sysUserService.getById(userId);
+            if (user == null) {
+                logger.warn("用户不存在, userId: {}", userId);
+                return OAuth2ErrorResponse.error(
+                    OAuth2ErrorResponse.INVALID_GRANT, 
+                    "用户不存在", 
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+            
+            // 生成token
+            Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
+            
+            logger.info("成功通过user_code换取token, userId: {}", userId);
             return ResponseEntity.ok(tokenInfo);
             
         } catch (Exception e) {

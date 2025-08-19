@@ -6,7 +6,7 @@ import com.webapp.security.core.service.SysAlipayUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.alipay.AlipayUserService.AlipayUserInfo;
 import com.webapp.security.sso.third.UserLoginService;
-import com.webapp.security.sso.third.RedisCodeService;
+import com.webapp.security.sso.third.AuthorizationCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +55,7 @@ public class AlipayOAuth2Controller {
     private SysAlipayUserService sysAlipayUserService;
 
     @Autowired
-    private RedisCodeService redisCodeService;
+    private AuthorizationCodeService authorizationCodeService;
 
     /**
      * 重定向到支付宝授权页面
@@ -120,16 +120,13 @@ public class AlipayOAuth2Controller {
             );
 
             if (userId.isPresent()) {
-                // 已关联，直接生成令牌
+                // 已关联，生成userId code供前端兑换token
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 生成访问令牌
-                    Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
-
-                    // 生成token code并重定向到前端
-                    String tokenCode = redisCodeService.generateTokenCode(tokenInfo);
+                    // 生成userId code并重定向到前端
+                    String userCode = authorizationCodeService.generateUserCode(user.getUserId());
                     String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
-                            .queryParam("token_code", tokenCode)
+                            .queryParam("user_code", userCode)
                             .build()
                             .toUriString();
 
@@ -141,7 +138,7 @@ public class AlipayOAuth2Controller {
 
             // 未关联，生成绑定code并重定向到前端选择页面
             String encryptedAlipayUserId = encryptAlipayUserId(alipayUser.getUserId());
-            String bindCode = redisCodeService.generateBindCode(encryptedAlipayUserId, "alipay");
+            String bindCode = authorizationCodeService.generateBindCode(encryptedAlipayUserId, "alipay");
 
             // 重定向到前端，附带必要的参数
             String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
@@ -182,7 +179,7 @@ public class AlipayOAuth2Controller {
 
         try {
             // 验证并消费绑定code
-            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
                 return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
             }
@@ -227,7 +224,7 @@ public class AlipayOAuth2Controller {
 
         try {
             // 验证并消费绑定code
-            RedisCodeService.BindCodeData bindData = redisCodeService.validateAndConsumeBindCode(code);
+            AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
                 return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
             }

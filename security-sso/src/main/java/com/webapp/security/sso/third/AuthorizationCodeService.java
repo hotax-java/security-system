@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
  * 用于生成、验证和删除一次性code的通用服务
  */
 @Service
-public class RedisCodeService {
+public class AuthorizationCodeService {
     
-    private static final Logger logger = LoggerFactory.getLogger(RedisCodeService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthorizationCodeService.class);
     
     private static final String CODE_PREFIX = "oauth2:code:";
     private static final String TOKEN_PREFIX = "oauth2:token:";
@@ -51,19 +51,21 @@ public class RedisCodeService {
         return code;
     }
     
+
+    
     /**
-     * 生成并存储一次性code用于token换取
+     * 生成并存储userId code用于前端兑换token
      * 
-     * @param tokenInfo token信息
+     * @param userId 用户ID
      * @return 生成的code
      */
-    public String generateTokenCode(Object tokenInfo) {
+    public String generateUserCode(Long userId) {
         String code = generateRandomCode();
-        String key = TOKEN_PREFIX + code;
+        String key = CODE_PREFIX + "user:" + code;
         
-        redisTemplate.opsForValue().set(key, tokenInfo, DEFAULT_EXPIRE_MINUTES, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(key, userId, DEFAULT_EXPIRE_MINUTES, TimeUnit.MINUTES);
         
-        logger.info("生成token code: {}, 有效期: {}分钟", code, DEFAULT_EXPIRE_MINUTES);
+        logger.info("生成用户code: {}, userId: {}, 有效期: {}分钟", code, userId, DEFAULT_EXPIRE_MINUTES);
         return code;
     }
     
@@ -93,28 +95,31 @@ public class RedisCodeService {
         }
     }
     
+
+    
     /**
-     * 验证并获取token信息（一次性使用）
+     * 验证并获取userId（一次性使用）
      * 
      * @param code 要验证的code
-     * @return token信息，如果code无效或已过期则返回null
+     * @return userId，如果code无效或已过期则返回null
      */
-    public Object validateAndConsumeTokenCode(String code) {
-        String key = TOKEN_PREFIX + code;
+    public Long validateAndConsumeUserCode(String code) {
+        String key = CODE_PREFIX + "user:" + code;
         
         try {
-            Object tokenInfo = redisTemplate.opsForValue().get(key);
-            if (tokenInfo != null) {
+            Object userIdObj = redisTemplate.opsForValue().get(key);
+            if (userIdObj != null) {
                 // 立即删除code（一次性使用）
                 redisTemplate.delete(key);
-                logger.info("验证并消费token code成功: {}", code);
-                return tokenInfo;
+                Long userId = (Long) userIdObj;
+                logger.info("验证并消费用户code成功: {}, userId: {}", code, userId);
+                return userId;
             } else {
-                logger.warn("token code无效或已过期: {}", code);
+                logger.warn("用户code无效或已过期: {}", code);
                 return null;
             }
         } catch (Exception e) {
-            logger.error("验证token code时发生错误: {}", code, e);
+            logger.error("验证用户code时发生错误: {}", code, e);
             return null;
         }
     }
