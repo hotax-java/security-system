@@ -30,7 +30,7 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   useEffect(() => {
     // 解析URL中的参数
     const params = new URLSearchParams(location.search);
-    const userCode = params.get('user_code');
+    const tokenCode = params.get('token_code');
     const bindCode = params.get('code');
     const errorMsg = params.get('error');
     const nickname = params.get('nickname');
@@ -49,9 +49,9 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       return;
     }
     
-    // 处理已绑定用户的情况（通过user_code换取token）
-    if (userCode) {
-      exchangeUserTokenWithCode(userCode);
+    // 处理已绑定用户的情况（通过token_code换取token）
+    if (tokenCode) {
+      exchangeTokenWithCode(tokenCode);
       return;
     }
     
@@ -78,13 +78,13 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
     setLoading(false);
   }, [location.search, location.pathname]);
 
-  // 通过user_code换取token信息
-  const exchangeUserTokenWithCode = async (userCode: string) => {
+  // 通过token_code换取token信息
+  const exchangeTokenWithCode = async (tokenCode: string) => {
     try {
       setLoading(true);
       
-      const response = await axios.post(`${API_BASE_URL}/oauth2/token/exchange-user`, 
-        new URLSearchParams({ user_code: userCode })
+      const response = await axios.post(`${API_BASE_URL}/oauth2/token/exchange`, 
+        new URLSearchParams({ code: tokenCode })
       );
       
       if (response.data) {
@@ -95,7 +95,7 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
         setLoading(false);
       }
     } catch (error: any) {
-      console.error('User Token换取失败:', error);
+      console.error('Token换取失败:', error);
       setError(error.response?.data?.message || 'Token换取失败');
       setLoading(false);
     }

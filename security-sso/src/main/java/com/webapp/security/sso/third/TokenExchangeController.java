@@ -32,19 +32,19 @@ public class TokenExchangeController {
     private SysUserService sysUserService;
     
     /**
-     * 通过user_code换取token信息
+     * 通过token_code换取token信息
      * 
-     * @param code 用户code（原参数名保持不变以兼容前端）
+     * @param code token_code（原参数名保持不变以兼容前端）
      * @return token信息
      */
     @PostMapping("/exchange")
     public ResponseEntity<?> exchangeToken(@RequestParam("code") String code) {
         try {
-            // 验证并消费user code
-            Long userId = authorizationCodeService.validateAndConsumeUserCode(code);
+            // 验证并消费token_code
+            Long userId = authorizationCodeService.validateAndConsumeTokenCode(code);
             
             if (userId == null) {
-                logger.warn("无效的user code: {}", code);
+                logger.warn("无效的token_code: {}", code);
                 return OAuth2ErrorResponse.error(
                     OAuth2ErrorResponse.INVALID_GRANT, 
                     "无效的code或code已过期", 
@@ -66,7 +66,7 @@ public class TokenExchangeController {
             // 生成token
             Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
             
-            logger.info("成功通过user_code换取token, userId: {}", userId);
+            logger.info("成功通过token_code换取token, userId: {}", userId);
             return ResponseEntity.ok(tokenInfo);
             
         } catch (Exception e) {

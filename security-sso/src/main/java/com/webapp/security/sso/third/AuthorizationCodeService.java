@@ -19,7 +19,7 @@ public class AuthorizationCodeService {
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationCodeService.class);
     
     private static final String CODE_PREFIX = "oauth2:code:";
-    private static final String TOKEN_PREFIX = "oauth2:token:";
+    private static final String TOKEN_PREFIX = "oauth2:token:code:";
     private static final int CODE_LENGTH = 32;
     private static final int DEFAULT_EXPIRE_MINUTES = 5;
     
@@ -54,18 +54,18 @@ public class AuthorizationCodeService {
 
     
     /**
-     * 生成并存储userId code用于前端兑换token
+     * 生成token code，用于缓存userId供前端兑换token
      * 
      * @param userId 用户ID
-     * @return 生成的code
+     * @return 生成的token_code
      */
-    public String generateUserCode(Long userId) {
+    public String generateTokenCode(Long userId) {
         String code = generateRandomCode();
-        String key = CODE_PREFIX + "user:" + code;
+        String key = TOKEN_PREFIX + code;
         
         redisTemplate.opsForValue().set(key, userId, DEFAULT_EXPIRE_MINUTES, TimeUnit.MINUTES);
         
-        logger.info("生成用户code: {}, userId: {}, 有效期: {}分钟", code, userId, DEFAULT_EXPIRE_MINUTES);
+        logger.info("生成token code: {}, userId: {}, 有效期: {}分钟", code, userId, DEFAULT_EXPIRE_MINUTES);
         return code;
     }
     
@@ -98,13 +98,13 @@ public class AuthorizationCodeService {
 
     
     /**
-     * 验证并获取userId（一次性使用）
+     * 验证并消费token code，返回userId（一次性使用）
      * 
-     * @param code 要验证的code
+     * @param code 要验证的token_code
      * @return userId，如果code无效或已过期则返回null
      */
-    public Long validateAndConsumeUserCode(String code) {
-        String key = CODE_PREFIX + "user:" + code;
+    public Long validateAndConsumeTokenCode(String code) {
+        String key = TOKEN_PREFIX + code;
         
         try {
             Object userIdObj = redisTemplate.opsForValue().get(key);
@@ -112,14 +112,14 @@ public class AuthorizationCodeService {
                 // 立即删除code（一次性使用）
                 redisTemplate.delete(key);
                 Long userId = (Long) userIdObj;
-                logger.info("验证并消费用户code成功: {}, userId: {}", code, userId);
+                logger.info("验证并消费token code成功: {}, userId: {}", code, userId);
                 return userId;
             } else {
-                logger.warn("用户code无效或已过期: {}", code);
+                logger.warn("token code无效或已过期: {}", code);
                 return null;
             }
         } catch (Exception e) {
-            logger.error("验证用户code时发生错误: {}", code, e);
+            logger.error("验证token code时发生错误: {}", code, e);
             return null;
         }
     }

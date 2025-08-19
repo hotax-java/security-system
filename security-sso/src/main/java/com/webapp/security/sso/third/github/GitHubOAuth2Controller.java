@@ -121,13 +121,13 @@ public class GitHubOAuth2Controller {
             );
 
             if (userId.isPresent()) {
-                // 已关联，生成userId code供前端兑换token
-                SysUser user = sysUserService.getById(userId.get());
+                // 生成token code供前端兑换token
+                    SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 生成userId code并重定向到前端
-                    String userCode = authorizationCodeService.generateUserCode(user.getUserId());
+                    // 生成token code并重定向到前端
+                    String tokenCode = authorizationCodeService.generateTokenCode(user.getUserId());
                     String redirectUrl = UriComponentsBuilder.fromUriString(gitHubOAuth2Config.getFrontendCallbackUrl())
-                            .queryParam("user_code", userCode)
+                            .queryParam("token_code", tokenCode)
                             .build()
                             .toUriString();
 
