@@ -205,8 +205,9 @@ public class SecurityConfig {
                         OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
                 JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
                 jwtGenerator.setJwtCustomizer(jwtCustomizer);
-                // 创建授权码生成器
+
                 OAuth2AuthorizationCodeGenerator authorizationCodeGenerator = new OAuth2AuthorizationCodeGenerator();
+
                 OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
                 ShortOpaqueTokenGenerator shortOpaqueTokenGenerator = new ShortOpaqueTokenGenerator();
 

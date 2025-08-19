@@ -12,6 +12,15 @@ interface ThirdPartyCallbackProps {
   onLogin: (userData: any, token: string) => void;
 }
 
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token: string;
+  scope: string;
+  id_token?: string;
+}
+
 const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,36 +32,37 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
     // 解析URL参数
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
-    const state = params.get('state');
+    const state = params.get('state') || '';
     const clientId = params.get('clientId') || '';
-    
+    const platform = params.get('platform');
+
     if (!code) {
       setError('授权码不存在，请重新登录');
       return;
     }
 
     // state参数包含平台信息
-    if (state) {
+    if (platform) {
       setPlatform(state as 'github' | 'wechat' | 'alipay' | '');
     }
     
     // 通过后端代理获取token
-    exchangeTokenWithCode(code, clientId);
+    exchangeTokenWithCode(code, state, clientId);
   }, [location.search]);
 
   // 通过Admin后端代理获取token
-  const exchangeTokenWithCode = async (code: string, clientId: string) => {
+  const exchangeTokenWithCode = async (code: string, state: string, clientId: string) => {
     try {
       setLoading(true);
       
       // 使用authApi调用后端代理接口
-      const response = await businessApi.post('/api/oauth2/token', {
-          code: code, clientId: clientId,
+      const response:TokenResponse = await businessApi.post('/api/oauth2/token', {
+          code: code, state: state,clientId: clientId,
           redirectUri: window.location.origin + '/oauth2/callback'
       });
-      
-      if (response.data && response.data.access_token) {
-        handleLoginSuccess(response.data);
+   
+      if (response && response.access_token) {
+        handleLoginSuccess(response);
       } else {
         setError('Token获取失败');
         setLoading(false);
@@ -64,7 +74,7 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
     }
   };
 
-  const handleLoginSuccess = (tokenData: any) => {
+  const handleLoginSuccess = (tokenData: TokenResponse) => {
     // 提取完整的token信息
     const { access_token, refresh_token, expires_in } = tokenData;
     

@@ -55,6 +55,7 @@ public class AuthProxyController {
             MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();
             formParams.add("grant_type", "authorization_code");
             formParams.add("code", tokenRequest.getCode());
+            formParams.add("state", tokenRequest.getState());
             formParams.add("redirect_uri", tokenRequest.getRedirectUri());
 
             // 发送请求到OAuth2服务器的token端点

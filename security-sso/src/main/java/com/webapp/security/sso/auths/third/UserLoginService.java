@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
@@ -30,6 +32,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 用户登录绑定服务
@@ -46,66 +49,90 @@ public class UserLoginService {
     @Autowired
     private OAuth2Service oAuth2Service;
 
-
-
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private OAuth2AuthorizationService authorizationService;
 
     /********** OAuth2 授权码生成方法 **********/
-    
+
     /**
      * 生成OAuth2授权码并重定向
      * 
-     * @param user 系统用户
+     * @param user                系统用户
      * @param frontendCallbackUrl 前端回调URL
-     * @param state OAuth2 state参数
+     * @param state               OAuth2 state参数
      * @return 重定向响应
      */
-    public String generateAuthorizationCodeAndRedirect(SysUser user, String frontendCallbackUrl, String state) {
+    public String generateAuthorizationCodeAndRedirect(SysUser user, String frontendCallbackUrl, String platform) {
         try {
 
             // 获取webapp客户端配置
             RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(ClientContext.getClientId());
-            
+
             // 创建用户认证对象
             UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
             UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());
-            
+
             // 创建OAuth2授权构建器
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
                     .withRegisteredClient(registeredClient)
                     .principalName(authentication.getName())
                     .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                     .authorizedScopes(registeredClient.getScopes());
-            
+
+            // 创建并添加OAuth2AuthorizationRequest到授权构建器
+            // 这是解决第三方授权码问题的关键 - 创建模拟的授权请求
+            Map<String, Object> additionalParameters = new HashMap<>();
+            // 生成随机的state值
+            String state = UUID.randomUUID().toString().replaceAll("-", "");
+            // 可以将平台信息和随机值结合
+            String combinedState = platform + ":" + state;
+            additionalParameters.put(OAuth2ParameterNames.STATE, combinedState);
+
+            // 创建带有必要authorizationUri的授权请求对象
+            OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
+                    .authorizationUri("http://localhost:9000/oauth2/authorize") // 使用您的SSO授权端点
+                    .clientId(registeredClient.getClientId())
+                    .redirectUri(frontendCallbackUrl)
+                    .scopes(registeredClient.getScopes())
+                    .state(state)
+                    .additionalParameters(additionalParameters)
+                    .build();
+
+            // 添加OAuth2AuthorizationRequest到属性中，解决authorizationRequest为null的问题
+            authorizationBuilder.attribute(OAuth2AuthorizationRequest.class.getName(), authorizationRequest);
+
+            // 添加Principal到属性中，解决token生成时principal为null的问题
+            authorizationBuilder.attribute(java.security.Principal.class.getName(), authentication);
+
             // 生成OAuth2授权码
             OAuth2AuthorizationCode authorizationCode = oAuth2Service.generateAuthorizationCode(
                     authentication, registeredClient, authorizationBuilder);
-            
+
             // 保存授权信息
             OAuth2Authorization authorization = authorizationBuilder.build();
             authorizationService.save(authorization);
-            
+
             // 构建重定向URL
             return UriComponentsBuilder.fromUriString(frontendCallbackUrl)
                     .queryParam("code", authorizationCode.getTokenValue())
                     .queryParam("state", state)
-                    .queryParam("clientId",  ClientContext.getClientId())
+                    .queryParam("clientId", ClientContext.getClientId())
+                    .queryParam("platform", platform)
                     .build()
                     .toUriString();
-                    
+
         } catch (Exception e) {
             logger.error("生成OAuth2授权码失败", e);
             throw new RuntimeException("生成授权码失败: " + e.getMessage());
         }
     }
-    
+
     /********** Token 生成相关方法 **********/
-    
+
     /**
      * 生成用户令牌
      * 

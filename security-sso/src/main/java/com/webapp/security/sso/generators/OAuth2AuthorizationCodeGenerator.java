@@ -16,21 +16,20 @@ import java.time.temporal.ChronoUnit;
  */
 public class OAuth2AuthorizationCodeGenerator implements OAuth2TokenGenerator<OAuth2AuthorizationCode> {
 
-    @Override
-    public OAuth2AuthorizationCode generate(OAuth2TokenContext context) {
-            if (context.getTokenType() == null ||
-                            !OAuth2ParameterNames.CODE.equals(context.getTokenType().getValue())) {
-                    return null;
-            }
+        @Override
+        public OAuth2AuthorizationCode generate(OAuth2TokenContext context) {
+                if (context.getTokenType() == null ||
+                                !OAuth2ParameterNames.CODE.equals(context.getTokenType().getValue())) {
+                        return null;
+                }
 
-            // 生成随机授权码值
-            String tokenValue = GenerateUtils.generateShortToken();;
-            Instant issuedAt = Instant.now();
-            // 授权码通常较短有效期，如10分钟
-            Instant expiresAt = issuedAt.plus(10, ChronoUnit.MINUTES);
+                // 生成随机授权码值
+                String tokenValue = GenerateUtils.generateShortToken();
+                Instant issuedAt = Instant.now();
+                // 授权码通常较短有效期，如10分钟
+                Instant expiresAt = issuedAt.plus(10, ChronoUnit.MINUTES);
 
-            return new OAuth2AuthorizationCode(tokenValue, issuedAt, expiresAt);
-    }
-
+                return new OAuth2AuthorizationCode(tokenValue, issuedAt, expiresAt);
+        }
 
 }

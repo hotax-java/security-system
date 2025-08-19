@@ -7,7 +7,8 @@ import lombok.Data;
  */
 @Data
 public class TokenRequest {
-    private String clientId;
     private String code;
+    private String state;
     private String redirectUri;
+    private String clientId;
 }
