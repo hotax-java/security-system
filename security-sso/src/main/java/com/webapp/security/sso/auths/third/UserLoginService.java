@@ -90,60 +90,60 @@ public class UserLoginService {
                             userDetails, null, userDetails.getAuthorities());
 
                     // 创建OAuth2授权构建器
-                        OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
-                                        .withRegisteredClient(registeredClient)
-                                        .principalName(authentication.getName())
-                                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                                        .authorizedScopes(registeredClient.getScopes());
+                    OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
+                                    .withRegisteredClient(registeredClient)
+                                    .principalName(authentication.getName())
+                                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                                    .authorizedScopes(registeredClient.getScopes());
 
-                        // 创建并添加OAuth2AuthorizationRequest到授权构建器
-                        // 这是解决第三方授权码问题的关键 - 创建模拟的授权请求
-                        Map<String, Object> additionalParameters = new HashMap<>();
-                        // 生成随机的state值
-                        String state = UUID.randomUUID().toString().replaceAll("-", "");
-                        // 可以将平台信息和随机值结合
-                        String combinedState = platform + ":" + state;
-                        additionalParameters.put(OAuth2ParameterNames.STATE, combinedState);
+                    // 创建并添加OAuth2AuthorizationRequest到授权构建器
+                    // 这是解决第三方授权码问题的关键 - 创建模拟的授权请求
+                    Map<String, Object> additionalParameters = new HashMap<>();
+                    // 生成随机的state值
+                    String state = UUID.randomUUID().toString().replaceAll("-", "");
+                    // 可以将平台信息和随机值结合
+                    String combinedState = platform + ":" + state;
+                    additionalParameters.put(OAuth2ParameterNames.STATE, combinedState);
 
-                        // 构建授权URL
-                        String authorizationUri = UriComponentsBuilder.fromUriString(issuerUri)
-                                        .path("/oauth2/authorize")
-                                        .build()
-                                        .toUriString();
+                    // 构建授权URL
+                    String authorizationUri = UriComponentsBuilder.fromUriString(issuerUri)
+                                    .path("/oauth2/authorize")
+                                    .build()
+                                    .toUriString();
 
-                        // 创建带有必要authorizationUri的授权请求对象
-                        OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
-                                        .authorizationUri(authorizationUri) // 使用配置的授权端点
-                                        .clientId(registeredClient.getClientId())
-                                        .redirectUri(frontendCallbackUrl)
-                                        .scopes(registeredClient.getScopes())
-                                        .state(state)
-                                        .additionalParameters(additionalParameters)
-                                        .build();
+                    // 创建带有必要authorizationUri的授权请求对象
+                    OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
+                                    .authorizationUri(authorizationUri) // 使用配置的授权端点
+                                    .clientId(registeredClient.getClientId())
+                                    .redirectUri(frontendCallbackUrl)
+                                    .scopes(registeredClient.getScopes())
+                                    .state(state)
+                                    .additionalParameters(additionalParameters)
+                                    .build();
 
-                        // 添加OAuth2AuthorizationRequest到属性中，解决authorizationRequest为null的问题
-                        authorizationBuilder.attribute(OAuth2AuthorizationRequest.class.getName(),
-                                        authorizationRequest);
+                    // 添加OAuth2AuthorizationRequest到属性中，解决authorizationRequest为null的问题
+                    authorizationBuilder.attribute(OAuth2AuthorizationRequest.class.getName(),
+                                    authorizationRequest);
 
-                        // 添加Principal到属性中，解决token生成时principal为null的问题
-                        authorizationBuilder.attribute(java.security.Principal.class.getName(), authentication);
+                    // 添加Principal到属性中，解决token生成时principal为null的问题
+                    authorizationBuilder.attribute(java.security.Principal.class.getName(), authentication);
 
-                        // 生成OAuth2授权码
-                        OAuth2AuthorizationCode authorizationCode = oAuth2Service.generateAuthorizationCode(
-                                        authentication, registeredClient, authorizationBuilder);
+                    // 生成OAuth2授权码
+                    OAuth2AuthorizationCode authorizationCode = oAuth2Service.generateAuthorizationCode(
+                                    authentication, registeredClient, authorizationBuilder);
 
-                        // 保存授权信息
-                        OAuth2Authorization authorization = authorizationBuilder.build();
-                        authorizationService.save(authorization);
+                    // 保存授权信息
+                    OAuth2Authorization authorization = authorizationBuilder.build();
+                    authorizationService.save(authorization);
 
-                        // 构建重定向URL
-                        return UriComponentsBuilder.fromUriString(frontendCallbackUrl)
-                                        .queryParam("code", authorizationCode.getTokenValue())
-                                        .queryParam("state", state)
-                                        .queryParam("clientId", ClientContext.getClientId())
-                                        .queryParam("platform", platform)
-                                        .build()
-                                        .toUriString();
+                    // 构建重定向URL
+                    return UriComponentsBuilder.fromUriString(frontendCallbackUrl)
+                                    .queryParam("code", authorizationCode.getTokenValue())
+                                    .queryParam("state", state)
+                                    .queryParam("clientId", ClientContext.getClientId())
+                                    .queryParam("platform", platform)
+                                    .build()
+                                    .toUriString();
 
                 } catch (Exception e) {
                         logger.error("生成OAuth2授权码失败", e);
