@@ -125,10 +125,8 @@ public class AlipayOAuth2Controller {
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
                     // 使用UserLoginService生成OAuth2授权码并获取重定向URL
-                    // String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
-                    // user, alipayConfig.getFrontendCallbackUrl(), "alipay");
-                    String redirectUrl = userLoginService
-                            .generateRedirectUriWithoutCode(alipayConfig.getFrontendCallbackUrl(), "alipay", user);
+                     String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                     user, alipayConfig.getFrontendCallbackUrl(), "alipay");
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)

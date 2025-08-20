@@ -83,8 +83,11 @@ public class UserLoginService {
                     // 获取webapp客户端配置
                     RegisteredClient registeredClient = oAuth2Service
                                     .getRegisteredClient(ClientContext.getClientId());
-
-                    Authentication authentication = getAuthentication(user);
+                    // 创建用户认证对象
+                    UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+                    Authentication authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
 
                     // 创建OAuth2授权构建器
                         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
@@ -146,59 +149,6 @@ public class UserLoginService {
                         logger.error("生成OAuth2授权码失败", e);
                         throw new RuntimeException("生成授权码失败: " + e.getMessage());
                 }
-        }
-
-        /**
-         * 生成重定向URI，但不生成授权码
-         * 只添加state、clientId和platform参数
-         *
-         * @param redirectUri 重定向URI
-         * @param platform    平台标识
-         * @param user        系统用户
-         * @return 完整的重定向URI
-         */
-        public String generateRedirectUriWithoutCode(String redirectUri, String platform, SysUser user) {
-                logger.info("生成不带授权码的重定向URI: redirectUri={}, platform={}", redirectUri, platform);
-
-                try {
-                        // 创建用户认证对象
-                    getAuthentication(user);
-
-                    // 生成随机的state值
-                        String state = UUID.randomUUID().toString().replaceAll("-", "");
-
-                        // 构建重定向URL
-                        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(redirectUri)
-                                        .queryParam("state", state)
-                                        .queryParam("clientId", ClientContext.getClientId())
-                                        .queryParam("platform", platform);
-
-                        String redirectUrl = uriBuilder.build().toUriString();
-                        logger.info("生成重定向URL: {}", redirectUrl);
-
-                        return redirectUrl;
-                } catch (Exception e) {
-                        logger.error("生成重定向URI失败", e);
-                        throw new RuntimeException("生成重定向URI失败", e);
-                }
-        }
-
-        private Authentication getAuthentication(SysUser user) {
-            // 创建用户认证对象
-            UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
-
-            // 将认证对象放入Spring Security上下文
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // 如果有HttpServletRequest，将会话保存到HTTP会话中
-            if (request != null) {
-                HttpSession session = request.getSession(true);
-                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
-            }
-            return authentication;
         }
 
         /********** Token 生成相关方法 **********/
