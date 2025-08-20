@@ -13,7 +13,7 @@ import { TokenManager } from '../services/tokenManager';
  * 3. 标记请求为_isAuthApi=true，让业务API实例识别并跳过token刷新
  */
 export const authApi: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_AUTH_BASE_URL || 'http://localhost:9000',
+  baseURL: process.env.REACT_APP_AUTH_BASE_URL || 'https://885ro126ov70.vicp.fun',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

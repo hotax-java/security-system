@@ -38,7 +38,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${ISSUER_URI:http://127.0.0.1:9000}
+          issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}
       client:
         registration:
           webapp-client:
@@ -46,11 +46,13 @@ spring:
             client-secret: webapp-secret
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/oauth2/callback"
-            scope: read,write
+            scope: read,write,openid,profile
+            # 添加PKCE必要配置，指明不使用客户端身份验证
+            # client-authentication-method: none
         provider:
           webapp-client:
-            issuer-uri: ${ISSUER_URI:http://127.0.0.1:9000}
-            token-uri: ${ISSUER_URI:http://127.0.0.1:9000}/oauth2/token
+            issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}
+            token-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}/oauth2/token
 
 # 日志配置
 logging:
@@ -59,3 +61,11 @@ logging:
     com.webapp: DEBUG
     org.springframework.security: INFO
     com.baomidou.mybatisplus: DEBUG
+
+# 自定义配置
+webapp:
+  frontend:
+    url: ${FRONTEND_URL:http://127.0.0.1:8081}
+  client:
+    enable-pkce: false # 默认禁用PKCE，使用Basic认证
+

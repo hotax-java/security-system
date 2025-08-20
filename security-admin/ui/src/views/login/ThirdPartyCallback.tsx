@@ -26,73 +26,102 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [platform, setPlatform] = useState<'github' | 'wechat' | 'alipay' | ''>('');
+  const [platform, setPlatform] = useState<'github' | 'wechat' | 'alipay' | 'admin' | ''>('');
 
   useEffect(() => {
-    // 解析URL参数
     const params = new URLSearchParams(location.search);
-    const code = params.get('code');
-    const state = params.get('state') || '';
-    const clientId = params.get('clientId') || '';
-    const platform = params.get('platform');
-
-    if (!code) {
-      setError('授权码不存在，请重新登录');
-      return;
-    }
-
-    // state参数包含平台信息
-    if (platform) {
-      setPlatform(state as 'github' | 'wechat' | 'alipay' | '');
-    }
     
-    // 通过后端代理获取token
-    exchangeTokenWithCode(code, state, clientId);
+    // 检查是否是Admin后端回调 (已经有token)
+    if (params.get('platform') === 'admin') {
+      handleAdminCallback(params);
+    } else {
+      // 这是第三方登录后的回调，需要发起OAuth2授权
+      handleSSOCallback(params);
+    }
   }, [location.search]);
 
-  // 通过Admin后端代理获取token
-  const exchangeTokenWithCode = async (code: string, state: string, clientId: string) => {
+  // 处理Admin后端回调 (已有token)
+  const handleAdminCallback = (params: URLSearchParams) => {
     try {
-      setLoading(true);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const expiresInStr = params.get('expires_in');
+      const platformType = params.get('platform');
       
-      // 使用authApi调用后端代理接口
-      const response:TokenResponse = await businessApi.post('/api/oauth2/token', {
-          code: code, state: state,clientId: clientId,
-          redirectUri: window.location.origin + '/oauth2/callback'
-      });
-   
-      if (response && response.access_token) {
-        handleLoginSuccess(response);
-      } else {
-        setError('Token获取失败');
-        setLoading(false);
+      if (!accessToken) {
+        setError('缺少访问令牌');
+        return;
       }
+      
+      setPlatform(platformType as 'admin');
+      
+      // 解析过期时间
+      let expiresIn = 3600; // 默认1小时
+      if (expiresInStr) {
+        expiresIn = parseInt(expiresInStr, 10);
+      }
+      
+      // 保存token
+      TokenManager.saveTokens(accessToken, refreshToken || '', expiresIn);
+      
+      // 调用登录回调
+      onLogin({ username: `${platform || 'third_party'}_user` }, accessToken);
+      
+      // 跳转到首页
+      message.success('登录成功');
+      navigate('/dashboard');
     } catch (error: any) {
-      console.error('Token获取失败:', error);
-      setError(error.response?.data?.message || 'Token获取失败');
-      setLoading(false);
+      console.error('处理Admin回调失败:', error);
+      setError('处理登录信息失败');
     }
   };
 
-  const handleLoginSuccess = (tokenData: TokenResponse) => {
-    // 提取完整的token信息
-    const { access_token, refresh_token, expires_in } = tokenData;
-    
-    // 解析过期时间，确保它是一个数字
-    let validExpiresIn = expires_in;
-    if (typeof expires_in === 'string') {
-      validExpiresIn = parseInt(expires_in, 10);
+  // 处理SSO第三方登录回调
+  const handleSSOCallback = (params: URLSearchParams) => {
+    const state = params.get('state') || '';
+    const clientId = params.get('clientId') || '';
+    const platformType = params.get('platform') || '';
+
+    if (!state || !clientId) {
+      setError('缺少必要参数，请重新登录');
+      return;
+    }
+
+    if (platformType) {
+      setPlatform(platformType as 'github' | 'wechat' | 'alipay' | '');
     }
     
-    // 使用TokenManager保存完整的token信息
-    TokenManager.saveTokens(access_token, refresh_token, validExpiresIn);
-    
-    // 调用登录回调
-    onLogin({ username: `${platform || 'third_party'}_user` }, access_token);
-    
-    // 跳转到首页
-    navigate('/dashboard');
-    message.success('登录成功');
+    // 调用后端接口发起OAuth2授权
+    initiateAuthorization(state, clientId, platformType);
+  };
+  
+  // 发起后端OAuth2授权
+  const initiateAuthorization = async (state: string, clientId: string, platform: string) => {
+    try {
+      setLoading(true);
+      
+      // 调用后端授权接口
+      await businessApi.post('/api/oauth2/authorize', {
+        state: state,
+        clientId: clientId,
+        redirectUri: window.location.origin + '/oauth2/callback',
+        platform: platform
+      });
+      
+      // 注意: 这里实际上不会执行到，因为后端会重定向
+      // 但为了防止任何意外情况，我们设置一个超时错误
+      setTimeout(() => {
+        if (loading) {
+          setError('授权请求超时，请重试');
+          setLoading(false);
+        }
+      }, 10000);
+      
+    } catch (error: any) {
+      console.error('授权请求失败:', error);
+      setError(error.response?.data?.message || '授权请求失败');
+      setLoading(false);
+    }
   };
 
   const getPlatformIcon = () => {
@@ -101,6 +130,8 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
         return <GithubOutlined />;
       case 'wechat':
         return <WechatOutlined style={{ color: '#07C160' }} />;
+      case 'admin':
+        return <UserOutlined style={{ color: '#1890ff' }} />;
       default:
         return <UserOutlined />;
     }
@@ -114,6 +145,8 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
         return '微信';
       case 'alipay':
         return '支付宝';
+      case 'admin':
+        return '系统';
       default:
         return '第三方';
     }

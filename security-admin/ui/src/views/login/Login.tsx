@@ -4,7 +4,7 @@ import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined, GithubOutlin
 import { authService } from "../../services/authService";
 
 // API基础URL
-const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'http://localhost:9000';
+const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'https://885ro126ov70.vicp.fun';
 
 const { Title, Text } = Typography;
 

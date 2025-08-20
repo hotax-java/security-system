@@ -77,7 +77,7 @@ public class AlipayOAuth2Controller {
     public ResponseEntity<?> callback(
             @RequestParam("auth_code") String authCode,
             @RequestParam("state") String state) throws UnsupportedEncodingException {
-
+        logger.info("支付宝OAuth2回调处理， state： {}", state);
         // 使用stateService验证state
         if (!stateService.validateState(state)) {
             // 重定向到前端错误页面
@@ -121,12 +121,14 @@ public class AlipayOAuth2Controller {
 
             if (userId.isPresent()) {
                 /********** OAuth2 授权码流程 - 已关联用户直接生成授权码 **********/
-                
+
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
                     // 使用UserLoginService生成OAuth2授权码并获取重定向URL
-                    String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
-                            user, alipayConfig.getFrontendCallbackUrl(), "alipay");
+                    // String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                    // user, alipayConfig.getFrontendCallbackUrl(), "alipay");
+                    String redirectUrl = userLoginService
+                            .generateRedirectUriWithoutCode(alipayConfig.getFrontendCallbackUrl(), "alipay", user);
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)
@@ -179,20 +181,23 @@ public class AlipayOAuth2Controller {
             // 验证并消费绑定code
             AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
-            
+
             // 解密支付宝用户ID
             String alipayUserId = decryptAlipayUserId(bindData.getEncryptedId());
 
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
             if (user == null) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             if (!userLoginService.verifyPassword(password, user.getPassword())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             // 绑定账号
@@ -205,7 +210,8 @@ public class AlipayOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("绑定支付宝账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -224,9 +230,10 @@ public class AlipayOAuth2Controller {
             // 验证并消费绑定code
             AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"alipay".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
-            
+
             // 解密支付宝用户ID
             String alipayUserId = decryptAlipayUserId(bindData.getEncryptedId());
 
@@ -255,7 +262,8 @@ public class AlipayOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("创建新账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -291,6 +299,5 @@ public class AlipayOAuth2Controller {
             return null;
         }
     }
-
 
 }

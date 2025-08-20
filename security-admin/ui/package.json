@@ -71,5 +71,5 @@
     "rimraf": "^4.0.0",
     "serve": "^14.2.0"
   },
-  "proxy": "http://localhost:9000"
+  "proxy": "https://885ro126ov70.vicp.fun"
 }
