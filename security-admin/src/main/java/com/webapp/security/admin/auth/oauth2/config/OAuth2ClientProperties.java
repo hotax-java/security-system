@@ -1,4 +1,4 @@
-package com.webapp.security.core.auths.oauth2.config;
+package com.webapp.security.admin.auth.oauth2.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
  * OAuth2客户端配置属性
  */
 @Configuration
-@ConfigurationProperties(prefix = "webapp.oauth2.client")
+@ConfigurationProperties(prefix = "webapp.oauth2")
 public class OAuth2ClientProperties {
 
     /**

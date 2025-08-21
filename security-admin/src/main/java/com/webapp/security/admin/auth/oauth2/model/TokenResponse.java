@@ -1,4 +1,4 @@
-package com.webapp.security.core.auths.oauth2.model;
+package com.webapp.security.admin.auth.oauth2.model;
 
 import java.io.Serializable;
 

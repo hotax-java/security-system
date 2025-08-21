@@ -8,6 +8,7 @@ import com.webapp.security.core.service.SysWechatUserService;
 import com.webapp.security.sso.auths.third.UserLoginService;
 import com.webapp.security.sso.auths.third.wechat.WechatUserService.WechatUserInfo;
 import com.webapp.security.sso.auths.third.AuthorizationCodeService;
+import com.webapp.security.sso.auths.third.PkceStateStore;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,13 +66,28 @@ public class WechatOAuth2Controller {
     @Autowired
     private AuthorizationCodeService authorizationCodeService;
 
+    @Autowired
+    private PkceStateStore pkceStateStore;
+
     /**
      * 发起微信授权请求
      */
     @GetMapping("/authorize")
-    public RedirectView authorize() {
+    public RedirectView authorize(
+            @RequestParam(required = false) String code_challenge,
+            @RequestParam(required = false) String code_challenge_method) {
         // 生成并存储state，用于验证回调请求
         String state = stateService.generateAndSaveState();
+
+        // 如果提供了code_challenge，则存储PKCE参数
+        if (code_challenge != null && !code_challenge.isEmpty()) {
+            // 存储PKCE参数与state的关联
+            pkceStateStore.savePkceParams(state, code_challenge,
+                    code_challenge_method != null ? code_challenge_method : "S256");
+            logger.info("发起微信授权请求，state: {}, 使用PKCE模式", state);
+        } else {
+            logger.info("发起微信授权请求，state: {}", state);
+        }
 
         // 获取微信授权URL
         String authorizeUrl = wechatUserService.getAuthorizeUrl(state);
@@ -122,12 +138,29 @@ public class WechatOAuth2Controller {
 
             if (userId.isPresent()) {
                 /********** OAuth2 授权码流程 - 已关联用户直接生成授权码 **********/
-                
+
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 使用UserLoginService生成OAuth2授权码并获取重定向URL
-                    String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
-                            user, wechatOAuth2Config.getFrontendCallbackUrl(), "wechat_oauth2");
+                    // 检查是否有PKCE参数
+                    Map<String, String> pkceParams = pkceStateStore.getPkceParams(state);
+                    String redirectUrl;
+
+                    if (pkceParams != null) {
+                        // 使用PKCE模式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirectWithPkce(
+                                user, wechatOAuth2Config.getFrontendCallbackUrl(), "wechat",
+                                pkceParams.get("code_challenge"),
+                                pkceParams.get("code_challenge_method"));
+
+                        // 使用完后删除PKCE参数
+                        pkceStateStore.removePkceParams(state);
+                        logger.info("使用PKCE模式生成授权码，state: {}", state);
+                    } else {
+                        // 使用传统方式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                                user, wechatOAuth2Config.getFrontendCallbackUrl(), "wechat_oauth2");
+                        logger.info("使用标准模式生成授权码，state: {}", state);
+                    }
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)

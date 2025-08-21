@@ -7,6 +7,7 @@ import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.auths.third.UserLoginService;
 import com.webapp.security.sso.auths.third.github.GitHubUserService.GitHubUserInfo;
 import com.webapp.security.sso.auths.third.AuthorizationCodeService;
+import com.webapp.security.sso.auths.third.PkceStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,14 +59,28 @@ public class GitHubOAuth2Controller {
     @Autowired
     private AuthorizationCodeService authorizationCodeService;
 
+    @Autowired
+    private PkceStateStore pkceStateStore;
+
     /**
      * 重定向到GitHub授权页面
      */
     @GetMapping("/authorize")
-    public RedirectView authorize() {
+    public RedirectView authorize(
+            @RequestParam(required = false) String code_challenge,
+            @RequestParam(required = false) String code_challenge_method) {
         // 使用stateService生成state
         String state = stateService.generateAndSaveState();
-        logger.info("发起GitHub授权请求，state: {}", state);
+
+        // 如果提供了code_challenge，则存储PKCE参数
+        if (code_challenge != null && !code_challenge.isEmpty()) {
+            // 存储PKCE参数与state的关联
+            pkceStateStore.savePkceParams(state, code_challenge,
+                    code_challenge_method != null ? code_challenge_method : "S256");
+            logger.info("发起GitHub授权请求，state: {}, 使用PKCE模式", state);
+        } else {
+            logger.info("发起GitHub授权请求，state: {}", state);
+        }
 
         return new RedirectView(gitHubUserService.getAuthorizeUrl(state));
     }
@@ -117,17 +132,33 @@ public class GitHubOAuth2Controller {
                     githubUser.getAvatarUrl(),
                     githubUser.getBio(),
                     githubUser.getLocation(),
-                    githubUser.getCompany()
-            );
+                    githubUser.getCompany());
 
             if (userId.isPresent()) {
                 /********** OAuth2 授权码流程 - 已关联用户直接生成授权码 **********/
-                
+
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 使用UserLoginService生成OAuth2授权码并获取重定向URL
-                    String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
-                            user, gitHubOAuth2Config.getFrontendCallbackUrl(), "github_oauth2");
+                    // 检查是否有PKCE参数
+                    Map<String, String> pkceParams = pkceStateStore.getPkceParams(state);
+                    String redirectUrl;
+
+                    if (pkceParams != null) {
+                        // 使用PKCE模式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirectWithPkce(
+                                user, gitHubOAuth2Config.getFrontendCallbackUrl(), "github",
+                                pkceParams.get("code_challenge"),
+                                pkceParams.get("code_challenge_method"));
+
+                        // 使用完后删除PKCE参数
+                        pkceStateStore.removePkceParams(state);
+                        logger.info("使用PKCE模式生成授权码，state: {}", state);
+                    } else {
+                        // 使用传统方式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                                user, gitHubOAuth2Config.getFrontendCallbackUrl(), "github_oauth2");
+                        logger.info("使用标准模式生成授权码，state: {}", state);
+                    }
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)
@@ -180,7 +211,8 @@ public class GitHubOAuth2Controller {
             // 验证并消费绑定code
             AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"github".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
 
             // 解密GitHub ID
@@ -190,11 +222,13 @@ public class GitHubOAuth2Controller {
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
             if (user == null) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             if (!userLoginService.verifyPassword(password, user.getPassword())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             // 绑定账号
@@ -206,7 +240,8 @@ public class GitHubOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("绑定GitHub账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -225,7 +260,8 @@ public class GitHubOAuth2Controller {
             // 验证并消费绑定code
             AuthorizationCodeService.BindCodeData bindData = authorizationCodeService.validateAndConsumeBindCode(code);
             if (bindData == null || !"github".equals(bindData.getPlatform())) {
-                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期", HttpStatus.BAD_REQUEST);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "无效的验证码或验证码已过期",
+                        HttpStatus.BAD_REQUEST);
             }
 
             // 解密GitHub ID
@@ -256,7 +292,8 @@ public class GitHubOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("创建并绑定GitHub账号失败", e);
-            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -292,6 +329,5 @@ public class GitHubOAuth2Controller {
             return null;
         }
     }
-
 
 }

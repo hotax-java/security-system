@@ -1,4 +1,4 @@
-package com.webapp.security.core.auths.oauth2.model;
+package com.webapp.security.admin.auth.oauth2.model;
 
 import java.io.Serializable;
 
@@ -11,19 +11,26 @@ public class TokenRequest implements Serializable {
 
     private String code;
     private String state;
-    private String redirectUri;
     private String clientId;
+    private String codeVerifier; // PKCE的code_verifier参数
 
     // 默认构造函数
     public TokenRequest() {
     }
 
     // 带参构造函数
-    public TokenRequest(String code, String state, String redirectUri, String clientId) {
+    public TokenRequest(String code, String state, String clientId) {
         this.code = code;
         this.state = state;
-        this.redirectUri = redirectUri;
         this.clientId = clientId;
+    }
+
+    // 带PKCE参数的构造函数
+    public TokenRequest(String code, String state, String clientId, String codeVerifier) {
+        this.code = code;
+        this.state = state;
+        this.clientId = clientId;
+        this.codeVerifier = codeVerifier;
     }
 
     // Getters and Setters
@@ -43,14 +50,6 @@ public class TokenRequest implements Serializable {
         this.state = state;
     }
 
-    public String getRedirectUri() {
-        return redirectUri;
-    }
-
-    public void setRedirectUri(String redirectUri) {
-        this.redirectUri = redirectUri;
-    }
-
     public String getClientId() {
         return clientId;
     }
@@ -59,13 +58,21 @@ public class TokenRequest implements Serializable {
         this.clientId = clientId;
     }
 
+    public String getCodeVerifier() {
+        return codeVerifier;
+    }
+
+    public void setCodeVerifier(String codeVerifier) {
+        this.codeVerifier = codeVerifier;
+    }
+
     @Override
     public String toString() {
         return "TokenRequest{" +
                 "code='" + code + '\'' +
                 ", state='" + state + '\'' +
-                ", redirectUri='" + redirectUri + '\'' +
                 ", clientId='" + clientId + '\'' +
+                ", codeVerifier='" + (codeVerifier != null ? "[PROTECTED]" : "null") + '\'' +
                 '}';
     }
 }

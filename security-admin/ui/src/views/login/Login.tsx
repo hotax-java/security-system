@@ -1,7 +1,9 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card, message, Typography, Space, Divider } from "antd";
 import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined, GithubOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService";
+import { AuthConfigService } from "../../services/authConfigService";
+import { PkceUtils } from "../../utils/pkceUtils";
 
 // API基础URL
 const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'https://885ro126ov70.vicp.fun';
@@ -15,6 +17,22 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const [pkceEnabled, setPkceEnabled] = useState<boolean>(false);
+  
+  // 获取认证配置
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const isEnabled = await AuthConfigService.isPkceEnabled();
+        setPkceEnabled(isEnabled);
+        console.log(`PKCE ${isEnabled ? '已启用' : '已禁用'}`);
+      } catch (error) {
+        console.error('获取认证配置失败:', error);
+      }
+    };
+    
+    loadConfig();
+  }, []);
 
   const handleSubmit = async (values: { username: string; password: string }) => {
     setLoading(true);
@@ -39,20 +57,37 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  const handleWechatLogin = () => {
-    // 跳转到微信授权页面
-    window.location.href = `${API_BASE_URL}/oauth2/wechat/authorize`;
+  // 处理第三方登录
+  const handleThirdPartyLogin = async (platform: string) => {
+    try {
+      if (pkceEnabled) {
+        // PKCE模式
+        const pkceParams = await PkceUtils.preparePkceParams();
+        
+        // 存储code_verifier
+        PkceUtils.storeCodeVerifier(pkceParams.codeVerifier);
+        
+        // 跳转到SSO的第三方授权页面，携带PKCE参数
+        window.location.href = `${API_BASE_URL}/oauth2/${platform}/authorize` +
+          `?code_challenge=${encodeURIComponent(pkceParams.codeChallenge)}` +
+          `&code_challenge_method=${encodeURIComponent(pkceParams.codeChallengeMethod)}`;
+        
+        console.log(`使用PKCE模式发起${platform}登录`);
+      } else {
+        // 传统模式
+        window.location.href = `${API_BASE_URL}/oauth2/${platform}/authorize`;
+        console.log(`使用传统模式发起${platform}登录`);
+      }
+    } catch (error) {
+      console.error(`${platform}登录发起失败:`, error);
+      message.error(`${platform}登录失败，请稍后重试`);
+    }
   };
-  
-  const handleGithubLogin = () => {
-    // 跳转到GitHub授权页面
-    window.location.href = `${API_BASE_URL}/oauth2/github/authorize`;
-  };
-  
-  const handleAlipayLogin = () => {
-    // 跳转到支付宝授权页面
-    window.location.href = `${API_BASE_URL}/oauth2/alipay/authorize`;
-  };
+
+  // 替换特定平台的处理函数
+  const handleWechatLogin = () => handleThirdPartyLogin('wechat');
+  const handleGithubLogin = () => handleThirdPartyLogin('github');
+  const handleAlipayLogin = () => handleThirdPartyLogin('alipay');
 
   return (
     <div style={{

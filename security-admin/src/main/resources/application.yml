@@ -45,27 +45,29 @@ spring:
             client-id: webapp-client
             client-secret: webapp-secret
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/oauth2/callback"
             scope: read,write,openid,profile
-            # 添加PKCE必要配置，指明不使用客户端身份验证
-            # client-authentication-method: none
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # PKCE和Basic认证共存配置
+            client-authentication-method: basic
         provider:
           webapp-client:
-            issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}
-            token-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}/oauth2/token
+            # issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}
+            authorization-uri: https://885ro126ov70.vicp.fun/oauth2/authorize
+            token-uri: https://885ro126ov70.vicp.fun/oauth2/token
+            jwk-set-uri: https://885ro126ov70.vicp.fun/oauth2/jwks
+            user-info-uri: https://885ro126ov70.vicp.fun/userinfo
 
 # 日志配置
 logging:
   level:
     root: INFO
     com.webapp: DEBUG
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG # 提高安全相关日志级别，方便调试
     com.baomidou.mybatisplus: DEBUG
+    org.springframework.web: DEBUG # 添加Web相关日志，方便调试请求/响应
 
 # 自定义配置
 webapp:
-  frontend:
-    url: ${FRONTEND_URL:http://127.0.0.1:8081}
-  client:
+  oauth2:
     enable-pkce: false # 默认禁用PKCE，使用Basic认证
-
+    # 可以通过环境变量启用: -Dwebapp.oauth2.enable-pkce=true

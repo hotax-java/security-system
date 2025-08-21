@@ -7,6 +7,7 @@ import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.auths.third.alipay.AlipayUserService.AlipayUserInfo;
 import com.webapp.security.sso.auths.third.UserLoginService;
 import com.webapp.security.sso.auths.third.AuthorizationCodeService;
+import com.webapp.security.sso.auths.third.PkceStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,14 +58,28 @@ public class AlipayOAuth2Controller {
     @Autowired
     private AuthorizationCodeService authorizationCodeService;
 
+    @Autowired
+    private PkceStateStore pkceStateStore;
+
     /**
      * 重定向到支付宝授权页面
      */
     @GetMapping("/authorize")
-    public RedirectView authorize() {
+    public RedirectView authorize(
+            @RequestParam(required = false) String code_challenge,
+            @RequestParam(required = false) String code_challenge_method) {
         // 使用stateService生成state
         String state = stateService.generateAndSaveState();
-        logger.info("发起支付宝授权请求，state: {}", state);
+
+        // 如果提供了code_challenge，则存储PKCE参数
+        if (code_challenge != null && !code_challenge.isEmpty()) {
+            // 存储PKCE参数与state的关联
+            pkceStateStore.savePkceParams(state, code_challenge,
+                    code_challenge_method != null ? code_challenge_method : "S256");
+            logger.info("发起支付宝授权请求，state: {}, 使用PKCE模式", state);
+        } else {
+            logger.info("发起支付宝授权请求，state: {}", state);
+        }
 
         return new RedirectView(alipayUserService.getAuthorizeUrl(state));
     }
@@ -124,9 +139,26 @@ public class AlipayOAuth2Controller {
 
                 SysUser user = sysUserService.getById(userId.get());
                 if (user != null) {
-                    // 使用UserLoginService生成OAuth2授权码并获取重定向URL
-                     String redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
-                     user, alipayConfig.getFrontendCallbackUrl(), "alipay");
+                    // 检查是否有PKCE参数
+                    Map<String, String> pkceParams = pkceStateStore.getPkceParams(state);
+                    String redirectUrl;
+
+                    if (pkceParams != null) {
+                        // 使用PKCE模式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirectWithPkce(
+                                user, alipayConfig.getFrontendCallbackUrl(), "alipay",
+                                pkceParams.get("code_challenge"),
+                                pkceParams.get("code_challenge_method"));
+
+                        // 使用完后删除PKCE参数
+                        pkceStateStore.removePkceParams(state);
+                        logger.info("使用PKCE模式生成授权码，state: {}", state);
+                    } else {
+                        // 使用传统方式生成授权码
+                        redirectUrl = userLoginService.generateAuthorizationCodeAndRedirect(
+                                user, alipayConfig.getFrontendCallbackUrl(), "alipay");
+                        logger.info("使用标准模式生成授权码，state: {}", state);
+                    }
 
                     return ResponseEntity.status(HttpStatus.FOUND)
                             .header(HttpHeaders.LOCATION, redirectUrl)

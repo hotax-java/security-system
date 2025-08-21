@@ -1,8 +1,9 @@
-package com.webapp.security.core.auths.oauth2;
+package com.webapp.security.admin.auth.oauth2;
 
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -13,9 +14,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import com.webapp.security.core.auths.oauth2.config.OAuth2ClientProperties;
-import com.webapp.security.core.auths.oauth2.model.TokenRequest;
-import com.webapp.security.core.auths.oauth2.model.TokenResponse;
+import com.webapp.security.admin.auth.oauth2.config.OAuth2ClientProperties;
+import com.webapp.security.admin.auth.oauth2.model.TokenRequest;
+import com.webapp.security.admin.auth.oauth2.model.TokenResponse;
 
 import java.util.Map;
 
@@ -29,14 +30,17 @@ public class OAuth2ClientService {
 
     private static final Logger log = LoggerFactory.getLogger(OAuth2ClientService.class);
 
-    @Autowired(required = false)
+    @Resource
     private ClientRegistrationRepository clientRegistrationRepository;
 
-    @Autowired
+    @Resource
     private RestTemplate restTemplate;
 
-    @Autowired
+    @Resource
     private OAuth2ClientProperties properties;
+
+    @Value("${webapp.oauth2.redirect-uri:http://localhost:8081/oauth2/callback}")
+    private String defaultRedirectUri;
 
     /**
      * 检查是否启用了PKCE
@@ -53,12 +57,21 @@ public class OAuth2ClientService {
      * @return 令牌响应
      */
     public TokenResponse exchangeToken(TokenRequest request) {
-        if (isPkceEnabled()) {
-            log.debug("使用PKCE方式交换令牌");
-            return exchangeTokenWithPkce(request);
-        } else {
-            log.debug("使用非PKCE方式交换令牌");
-            return exchangeTokenWithBasicAuth(request);
+        try {
+            // 根据请求中是否包含codeVerifier来决定使用何种方式
+            if (StringUtils.hasText(request.getCodeVerifier())) {
+                log.debug("检测到codeVerifier，使用PKCE方式交换令牌");
+                return exchangeTokenWithPkce(request);
+            } else if (isPkceEnabled()) {
+                log.warn("PKCE已启用但请求中无codeVerifier，降级为非PKCE模式");
+                return exchangeTokenWithBasicAuth(request);
+            } else {
+                log.debug("使用非PKCE方式交换令牌");
+                return exchangeTokenWithBasicAuth(request);
+            }
+        } catch (Exception e) {
+            log.error("授权码交换过程中发生错误", e);
+            return null;
         }
     }
 
@@ -82,22 +95,34 @@ public class OAuth2ClientService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
+            // 如果有客户端密钥，使用Basic认证
+            if (StringUtils.hasText(clientRegistration.getClientSecret())) {
+                headers.setBasicAuth(
+                        clientRegistration.getClientId(),
+                        clientRegistration.getClientSecret());
+                log.debug("使用Basic认证方式添加客户端凭证");
+            }
+
             // 设置请求参数
             MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();
             formParams.add("grant_type", "authorization_code");
             formParams.add("code", tokenRequest.getCode());
-            formParams.add("redirect_uri", tokenRequest.getRedirectUri());
+            formParams.add("redirect_uri", defaultRedirectUri);
             formParams.add("client_id", clientRegistration.getClientId());
 
-            // 注意：在真正的PKCE流程中，还需要提供code_verifier参数
-            // 这里我们假设授权服务器已经适配了您的场景，不需要该参数
-            // 如果需要使用code_verifier，应该从会话或存储中获取之前生成的值
+            // 添加PKCE所需的code_verifier参数
+            formParams.add("code_verifier", tokenRequest.getCodeVerifier());
+            log.debug("添加code_verifier参数: {}", tokenRequest.getCodeVerifier().substring(0, 5) + "...(已省略)");
+
+            if (StringUtils.hasText(tokenRequest.getState())) {
+                formParams.add("state", tokenRequest.getState());
+            }
 
             // 发送请求到OAuth2服务器的token端点
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formParams, headers);
             String tokenUri = clientRegistration.getProviderDetails().getTokenUri();
 
-            log.debug("发送请求到token端点: {}", tokenUri);
+            log.debug("发送PKCE请求到token端点: {}", tokenUri);
             ResponseEntity<Map> response = restTemplate.exchange(
                     tokenUri,
                     HttpMethod.POST,
@@ -106,10 +131,10 @@ public class OAuth2ClientService {
 
             return parseTokenResponse(response.getBody());
         } catch (HttpClientErrorException e) {
-            log.error("获取token时发生HTTP错误: {}", e.getResponseBodyAsString(), e);
+            log.error("PKCE获取token时发生HTTP错误: {}", e.getResponseBodyAsString(), e);
             return null;
         } catch (Exception e) {
-            log.error("获取token失败", e);
+            log.error("PKCE获取token失败", e);
             return null;
         }
     }
@@ -142,13 +167,13 @@ public class OAuth2ClientService {
             if (StringUtils.hasText(request.getState())) {
                 formParams.add("state", request.getState());
             }
-            formParams.add("redirect_uri", request.getRedirectUri());
+            formParams.add("redirect_uri", defaultRedirectUri);
 
             // 发送请求到OAuth2服务器的token端点
             HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(formParams, headers);
             String tokenUri = clientRegistration.getProviderDetails().getTokenUri();
 
-            log.debug("发送请求到token端点: {}", tokenUri);
+            log.debug("发送Basic认证请求到token端点: {}", tokenUri);
             ResponseEntity<Map> response = restTemplate.exchange(
                     tokenUri,
                     HttpMethod.POST,
@@ -157,10 +182,10 @@ public class OAuth2ClientService {
 
             return parseTokenResponse(response.getBody());
         } catch (HttpClientErrorException e) {
-            log.error("获取token时发生HTTP错误: {}", e.getResponseBodyAsString(), e);
+            log.error("Basic认证获取token时发生HTTP错误: {}", e.getResponseBodyAsString(), e);
             return null;
         } catch (Exception e) {
-            log.error("获取token失败", e);
+            log.error("Basic认证获取token失败", e);
             return null;
         }
     }

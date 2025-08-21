@@ -1,64 +1,71 @@
 package com.webapp.security.core.filter;
 
+import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterConfig;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * 请求日志过滤器
- * 记录所有请求和响应的详细信息，包括请求体和响应体
+ * 记录所有HTTP请求和响应的详细信息，包括请求头、参数、请求体、响应头、响应体等
  */
 @Component
-public class RequestLoggingFilter extends OncePerRequestFilter {
-
+public class RequestLoggingFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    public void init(FilterConfig filterConfig) throws ServletException {
+        log.debug("RequestLoggingFilter初始化");
+    }
 
-        // 包装请求和响应以便多次读取
-        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
-        ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        // 包装请求和响应以便多次读取内容
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper((HttpServletRequest) request);
+        ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(
+                (HttpServletResponse) response);
 
         long startTime = System.currentTimeMillis();
-
         try {
-            // 记录请求开始
-            log.info("【请求开始】{} {}", request.getMethod(), request.getRequestURI());
-
             // 执行请求
-            filterChain.doFilter(requestWrapper, responseWrapper);
-
+            chain.doFilter(requestWrapper, responseWrapper);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
 
-            // 记录请求详情
-            logRequest(requestWrapper);
+            // 记录请求和响应信息
+            if (log.isDebugEnabled()) {
+                logRequest(requestWrapper);
+                logResponse(responseWrapper, duration);
+            }
 
-            // 记录响应详情
-            logResponse(responseWrapper, duration);
-
-            // 必须复制响应内容到原始响应
+            // 复制响应内容到原始响应
             responseWrapper.copyBodyToResponse();
         }
     }
 
     private void logRequest(ContentCachingRequestWrapper request) {
-        // 获取请求头信息
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+
+        // 获取请求头
         Map<String, String> headers = new HashMap<>();
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -72,15 +79,31 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         // 获取请求体
         String requestBody = getRequestBody(request);
 
-        // 记录请求信息
-        log.info("【请求信息】方法: {}, URI: {}, 协议: {}",
-                request.getMethod(), request.getRequestURI(), request.getProtocol());
-        log.info("【请求头】{}", headers);
-        log.info("【请求参数】{}", parameters);
+        log.debug("HTTP请求 => {} {} [Headers: {}] [Parameters: {}] [Body: {}]",
+                method, uri, headers, parameters, requestBody);
+    }
 
-        if (requestBody.length() > 0) {
-            log.info("【请求体】{}", requestBody);
+    private void logResponse(ContentCachingResponseWrapper response, long duration) {
+        int status = response.getStatus();
+
+        // 获取响应头
+        Map<String, String> headers = new HashMap<>();
+        Collection<String> headerNames = response.getHeaderNames();
+        for (String headerName : headerNames) {
+            headers.put(headerName, response.getHeader(headerName));
         }
+
+        // 获取响应体
+        String responseBody = getResponseBody(response);
+
+        String responseBodySummary = responseBody;
+        if (responseBody != null && responseBody.length() > 500) {
+            // 如果响应体太长，只显示摘要
+            responseBodySummary = responseBody.substring(0, 500) + "... [截断，总长度: " + responseBody.length() + "]";
+        }
+
+        log.debug("HTTP响应 <= [Status: {}] [Headers: {}] [Body: {}] [耗时: {}ms]",
+                status, headers, responseBodySummary, duration);
     }
 
     private String getRequestBody(ContentCachingRequestWrapper request) {
@@ -89,48 +112,32 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             return "";
         }
 
-        String contentEncoding = request.getCharacterEncoding();
-        if (contentEncoding == null) {
-            contentEncoding = "UTF-8";
-        }
-
         try {
-            return new String(content, contentEncoding);
+            String contentEncoding = request.getCharacterEncoding();
+            return new String(content, contentEncoding != null ? contentEncoding : "UTF-8");
         } catch (UnsupportedEncodingException e) {
-            log.warn("读取请求体失败", e);
+            log.warn("无法解析请求体编码", e);
             return "[无法读取请求体]";
         }
     }
 
-    private void logResponse(ContentCachingResponseWrapper response, long duration) {
-        // 获取响应体
+    private String getResponseBody(ContentCachingResponseWrapper response) {
         byte[] content = response.getContentAsByteArray();
-
-        // 响应状态
-        int status = response.getStatus();
-
-        // 记录响应信息
-        log.info("【响应信息】状态码: {}, 处理时间: {}ms", status, duration);
-
-        // 记录响应体（如果不是二进制内容）
-        if (content.length > 0) {
-            String contentType = response.getContentType();
-            if (contentType != null && !contentType.startsWith("image/") && !contentType.startsWith("video/")
-                    && !contentType.startsWith("audio/") && !contentType.startsWith("application/octet-stream")) {
-                String contentEncoding = response.getCharacterEncoding();
-                if (contentEncoding == null) {
-                    contentEncoding = "UTF-8";
-                }
-
-                try {
-                    String responseBody = new String(content, contentEncoding);
-                    log.info("【响应体】{}", responseBody);
-                } catch (UnsupportedEncodingException e) {
-                    log.warn("读取响应体失败", e);
-                }
-            } else {
-                log.info("【响应体】二进制内容，长度: {} bytes", content.length);
-            }
+        if (content.length == 0) {
+            return "";
         }
+
+        try {
+            String contentEncoding = response.getCharacterEncoding();
+            return new String(content, contentEncoding != null ? contentEncoding : "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.warn("无法解析响应体编码", e);
+            return "[无法读取响应体]";
+        }
+    }
+
+    @Override
+    public void destroy() {
+        log.debug("RequestLoggingFilter销毁");
     }
 }

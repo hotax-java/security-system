@@ -4,6 +4,8 @@ import { Card, message, Spin, Typography, Avatar, Button } from 'antd';
 import { UserOutlined, GithubOutlined, WechatOutlined } from '@ant-design/icons';
 import { businessApi } from '../../apis/api';
 import { TokenManager } from '../../services/tokenManager';
+import { AuthConfigService } from '../../services/authConfigService';
+import { PkceUtils } from '../../utils/pkceUtils';
 import ErrorPage from './ErrorPage';
 
 const { Title, Text } = Typography;
@@ -46,21 +48,49 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       setPlatform(state as 'github' | 'wechat' | 'alipay' | '');
     }
     
-    // 通过后端代理获取token
-    exchangeTokenWithCode(code, state, clientId);
+    // 检查是否启用PKCE
+    checkPkceAndExchangeToken(code, state, clientId);
   }, [location.search]);
 
-  // 通过Admin后端代理获取token
+  // 检查是否启用PKCE并交换令牌
+  const checkPkceAndExchangeToken = async (code: string, state: string, clientId: string) => {
+    try {
+      // 获取PKCE配置
+      const pkceEnabled = await AuthConfigService.isPkceEnabled();
+      
+      if (pkceEnabled) {
+        // PKCE模式：获取存储的code_verifier
+        const codeVerifier = PkceUtils.getStoredCodeVerifier();
+        
+        if (codeVerifier) {
+          // 使用PKCE模式交换令牌
+          exchangeTokenWithPkce(code, state, clientId, codeVerifier);
+        } else {
+          console.warn('PKCE已启用但未找到code_verifier，将使用传统模式');
+          exchangeTokenWithCode(code, state, clientId);
+        }
+      } else {
+        // 传统模式交换令牌
+        exchangeTokenWithCode(code, state, clientId);
+      }
+    } catch (error) {
+      console.error('获取PKCE配置失败，将使用传统模式:', error);
+      exchangeTokenWithCode(code, state, clientId);
+    }
+  };
+
+  // 通过Admin后端代理获取token (传统模式)
   const exchangeTokenWithCode = async (code: string, state: string, clientId: string) => {
     try {
       setLoading(true);
       
-      // 使用authApi调用后端代理接口
+      // 使用businessApi调用后端代理接口
       const response:TokenResponse = await businessApi.post('/api/oauth2/token', {
-          code: code, state: state,clientId: clientId,
-          redirectUri: window.location.origin + '/oauth2/callback'
+        code: code, 
+        state: state,
+        clientId: clientId || 'webapp-client'
       });
-   debugger
+
       if (response && response.access_token) {
         handleLoginSuccess(response);
       } else {
@@ -71,6 +101,39 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       console.error('Token获取失败:', error);
       setError(error.response?.data?.message || 'Token获取失败');
       setLoading(false);
+    }
+  };
+
+  // 使用PKCE模式获取token
+  const exchangeTokenWithPkce = async (code: string, state: string, clientId: string, codeVerifier: string) => {
+    try {
+      setLoading(true);
+      console.log('使用PKCE模式交换令牌');
+      
+      // 使用businessApi调用后端代理接口，附加codeVerifier
+      const response:TokenResponse = await businessApi.post('/api/oauth2/token', {
+        code: code,
+        state: state,
+        clientId: clientId || 'webapp-client',
+        codeVerifier: codeVerifier  // 添加codeVerifier参数
+      });
+
+      if (response && response.access_token) {
+        // 清除存储的code_verifier
+        PkceUtils.clearCodeVerifier();
+        
+        handleLoginSuccess(response);
+      } else {
+        setError('Token获取失败');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error('PKCE Token获取失败:', error);
+      setError(error.response?.data?.message || 'Token获取失败');
+      setLoading(false);
+      
+      // 清除存储的code_verifier
+      PkceUtils.clearCodeVerifier();
     }
   };
 
