@@ -139,6 +139,7 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
 
   const handleLoginSuccess = (tokenData: TokenResponse) => {
     // 提取完整的token信息
+      debugger
     const { access_token, refresh_token, expires_in } = tokenData;
 
     // 解析过期时间，确保它是一个数字

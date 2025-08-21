@@ -1,13 +1,10 @@
 package com.webapp.security.sso.config;
 
-import com.alibaba.fastjson.parser.deserializer.MapDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.webapp.security.sso.auths.oauth2.expand.MybatisOAuth2RegisteredClientRepository;
 import com.webapp.security.sso.generators.ShortOpaqueTokenGenerator;
 
 import com.webapp.security.sso.generators.OAuth2AuthorizationCodeGenerator;
@@ -16,12 +13,9 @@ import org.slf4j.LoggerFactory;
 import com.webapp.security.sso.entity.OAuth2Jwk;
 import com.webapp.security.sso.auths.oauth2.service.JwkService;
 import com.webapp.security.sso.auths.oauth2.expand.UserDetailsServiceImpl;
-import com.webapp.security.sso.auths.oauth2.expand.MyBatisOAuth2AuthorizationService;
-import com.webapp.security.sso.mapper.OAuth2AuthorizationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -58,8 +52,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
-import java.util.Map;
-
 /**
  * Spring Security配置
  */
@@ -71,7 +63,6 @@ public class SecurityConfig {
         private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
         private final UserDetailsServiceImpl userDetailsService;
-        //private final MybatisOAuth2RegisteredClientRepository mybatisOAuth2RegisteredClientRepository;
         private final JwkService jwkService;
 
         /**
@@ -95,7 +86,12 @@ public class SecurityConfig {
                                                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
                                 // 接受access tokens进行用户信息和客户端注册
                                 .oauth2ResourceServer((resourceServer) -> resourceServer
-                                                .jwt(Customizer.withDefaults()));
+                                                .jwt(Customizer.withDefaults()))
+                                // 添加无状态会话策略
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                // 禁用CSRF保护
+                                .csrf(AbstractHttpConfigurer::disable);
 
                 return http.build();
         }
@@ -140,6 +136,7 @@ public class SecurityConfig {
                                                 .permitAll())
                                 .logout(logout -> logout
                                                 .logoutSuccessUrl("/login?logout")
+                                                .deleteCookies("JSESSIONID") // 删除会话cookie
                                                 .permitAll())
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
@@ -225,9 +222,10 @@ public class SecurityConfig {
                 // Spring Authorization Server内置授权码生成
                 return new DelegatingOAuth2TokenGenerator(
                                 jwtGenerator,
+                                authorizationCodeGenerator,
                                 shortOpaqueTokenGenerator,
-                                refreshTokenGenerator,
-                                authorizationCodeGenerator);
+                                refreshTokenGenerator
+                                );
         }
 
         /**
@@ -237,20 +235,21 @@ public class SecurityConfig {
         @Bean
         @DependsOn("flywayInitializer")
         public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
-            return new JdbcRegisteredClientRepository(jdbcTemplate);
+                return new JdbcRegisteredClientRepository(jdbcTemplate);
         }
 
         /**
          * OAuth2授权服务 - MyBatis实现（生产环境） - 已被JDBC标准实现替代
          * 授权记录持久化到oauth2_authorization表
          */
-         //@Bean
-         //@DependsOn("flywayInitializer")
-         //public OAuth2AuthorizationService authorizationService(
-         //        OAuth2AuthorizationMapper authorizationMapper,
-         //        RegisteredClientRepository registeredClientRepository) {
-         //    return new MyBatisOAuth2AuthorizationService(authorizationMapper, registeredClientRepository);
-         //}
+        // @Bean
+        // @DependsOn("flywayInitializer")
+        // public OAuth2AuthorizationService
+        // authorizationService(OAuth2AuthorizationMapper authorizationMapper,
+        // RegisteredClientRepository registeredClientRepository) {
+        // return new MyBatisOAuth2AuthorizationService(authorizationMapper,
+        // registeredClientRepository);
+        // }
 
         /**
          * OAuth2授权服务 - JDBC标准实现

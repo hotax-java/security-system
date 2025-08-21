@@ -50,6 +50,7 @@ export const businessApi: AxiosInstance = axios.create({
  * 检查token是否有效，无效则尝试刷新
  */
 const requestInterceptor = async (config: any) => {
+    debugger
   // 检查是否为认证API请求或以/api/oauth2开头的路径
   if (config._isAuthApi || (config.url && config.url.startsWith('/api/oauth2'))) {
     // 标记为认证API请求
@@ -93,7 +94,8 @@ const requestInterceptor = async (config: any) => {
 /**
  * 响应拦截器：处理返回数据
  */
-const responseInterceptor = (response: any) => {  
+const responseInterceptor = (response: any) => {
+    debugger
   // 检查token是否即将过期，在后台刷新
   if (TokenManager.isTokenExpiringSoon()) {
     console.log('Token expiring soon, refreshing in background after successful response');
@@ -136,7 +138,8 @@ const responseInterceptor = (response: any) => {
  * 响应错误拦截器：处理401错误并自动刷新token
  */
 const responseErrorInterceptor = async (error: any) => {
-  // 获取原始请求配置
+    debugger
+    // 获取原始请求配置
   const originalRequest = error.config;
   
   // 检查请求URL是否以/api/oauth2开头

@@ -13,8 +13,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
-import com.webapp.security.admin.auth.oauth2.config.OAuth2ClientProperties;
 import com.webapp.security.admin.auth.oauth2.model.TokenRequest;
 import com.webapp.security.admin.auth.oauth2.model.TokenResponse;
 
@@ -36,8 +34,8 @@ public class OAuth2ClientService {
     @Resource
     private RestTemplate restTemplate;
 
-    @Resource
-    private OAuth2ClientProperties properties;
+    @Value("${spring.security.oauth2.client.registration.webapp-client.client-authentication-method: none}")
+    private String clientAuthenticationMethod;
 
     @Value("${webapp.oauth2.redirect-uri:http://localhost:8081/oauth2/callback}")
     private String defaultRedirectUri;
@@ -46,7 +44,7 @@ public class OAuth2ClientService {
      * 检查是否启用了PKCE
      */
     public boolean isPkceEnabled() {
-        return properties.isEnablePkce();
+        return "none".equals(clientAuthenticationMethod);
     }
 
     /**

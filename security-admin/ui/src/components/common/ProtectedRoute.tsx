@@ -20,6 +20,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   useEffect(() => {
     const checkAuthentication = async () => {
       try {
+          debugger
         // 检查是否已登录
         const isAuthenticated = TokenManager.isAuthenticated();
         
