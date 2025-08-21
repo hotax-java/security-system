@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
 /**
  * OAuth2客户端注册服务
  */
-@Service
+//@Service
 @RequiredArgsConstructor
-public class MybatisOAuth2RegisteredClientService implements RegisteredClientRepository {
+public class MybatisOAuth2RegisteredClientRepository implements RegisteredClientRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(MybatisOAuth2RegisteredClientService.class);
+    private static final Logger log = LoggerFactory.getLogger(MybatisOAuth2RegisteredClientRepository.class);
 
     private final OAuth2RegisteredClientMapper clientMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();

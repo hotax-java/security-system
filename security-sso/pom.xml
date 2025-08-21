@@ -150,6 +150,12 @@
             <artifactId>alipay-sdk-java</artifactId>
             <version>4.35.79.ALL</version>
         </dependency>
+
+        <!-- 添加JDBC支持 - 如果尚未包含 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

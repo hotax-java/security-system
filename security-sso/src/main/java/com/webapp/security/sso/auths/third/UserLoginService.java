@@ -247,12 +247,10 @@ public class UserLoginService {
                                 userDetails, null, userDetails.getAuthorities());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-
                 if (request != null) {
-                        HttpSession session = request.getSession(true);
-                        session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+                    HttpSession session = request.getSession(true);
+                    session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
                 }
-
                 return authentication;
         }
 

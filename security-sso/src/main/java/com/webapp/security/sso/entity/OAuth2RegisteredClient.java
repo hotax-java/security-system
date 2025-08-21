@@ -3,6 +3,7 @@ package com.webapp.security.sso.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
  * OAuth2客户端注册实体类
  */
 @TableName("oauth2_registered_client")
+@Data
 public class OAuth2RegisteredClient {
     
     @TableId
@@ -38,6 +40,9 @@ public class OAuth2RegisteredClient {
     
     @TableField("redirect_uris")
     private String redirectUris;
+
+    @TableField("post_logout_redirect_uris")
+    private String postLogoutRedirectUris;
     
     @TableField("scopes")
     private String scopes;
@@ -47,102 +52,5 @@ public class OAuth2RegisteredClient {
     
     @TableField("token_settings")
     private String tokenSettings;
-
-    // Getter and Setter methods
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    public LocalDateTime getClientIdIssuedAt() {
-        return clientIdIssuedAt;
-    }
-
-    public void setClientIdIssuedAt(LocalDateTime clientIdIssuedAt) {
-        this.clientIdIssuedAt = clientIdIssuedAt;
-    }
-
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-    }
-
-    public LocalDateTime getClientSecretExpiresAt() {
-        return clientSecretExpiresAt;
-    }
-
-    public void setClientSecretExpiresAt(LocalDateTime clientSecretExpiresAt) {
-        this.clientSecretExpiresAt = clientSecretExpiresAt;
-    }
-
-    public String getClientName() {
-        return clientName;
-    }
-
-    public void setClientName(String clientName) {
-        this.clientName = clientName;
-    }
-
-    public String getClientAuthenticationMethods() {
-        return clientAuthenticationMethods;
-    }
-
-    public void setClientAuthenticationMethods(String clientAuthenticationMethods) {
-        this.clientAuthenticationMethods = clientAuthenticationMethods;
-    }
-
-    public String getAuthorizationGrantTypes() {
-        return authorizationGrantTypes;
-    }
-
-    public void setAuthorizationGrantTypes(String authorizationGrantTypes) {
-        this.authorizationGrantTypes = authorizationGrantTypes;
-    }
-
-    public String getRedirectUris() {
-        return redirectUris;
-    }
-
-    public void setRedirectUris(String redirectUris) {
-        this.redirectUris = redirectUris;
-    }
-
-    public String getScopes() {
-        return scopes;
-    }
-
-    public void setScopes(String scopes) {
-        this.scopes = scopes;
-    }
-
-    public String getClientSettings() {
-        return clientSettings;
-    }
-
-    public void setClientSettings(String clientSettings) {
-        this.clientSettings = clientSettings;
-    }
-
-    public String getTokenSettings() {
-        return tokenSettings;
-    }
-
-    public void setTokenSettings(String tokenSettings) {
-        this.tokenSettings = tokenSettings;
-    }
 }
 

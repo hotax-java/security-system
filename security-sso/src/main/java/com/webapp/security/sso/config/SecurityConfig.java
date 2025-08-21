@@ -1,11 +1,13 @@
 package com.webapp.security.sso.config;
 
+import com.alibaba.fastjson.parser.deserializer.MapDeserializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.webapp.security.sso.auths.oauth2.expand.MybatisOAuth2RegisteredClientService;
+import com.webapp.security.sso.auths.oauth2.expand.MybatisOAuth2RegisteredClientRepository;
 import com.webapp.security.sso.generators.ShortOpaqueTokenGenerator;
 
 import com.webapp.security.sso.generators.OAuth2AuthorizationCodeGenerator;
@@ -19,12 +21,14 @@ import com.webapp.security.sso.mapper.OAuth2AuthorizationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -40,7 +44,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
@@ -49,6 +57,8 @@ import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+
+import java.util.Map;
 
 /**
  * Spring Security配置
@@ -61,7 +71,7 @@ public class SecurityConfig {
         private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
         private final UserDetailsServiceImpl userDetailsService;
-        private final MybatisOAuth2RegisteredClientService registeredClientService;
+        //private final MybatisOAuth2RegisteredClientRepository mybatisOAuth2RegisteredClientRepository;
         private final JwkService jwkService;
 
         /**
@@ -69,11 +79,12 @@ public class SecurityConfig {
          */
         @Bean
         @Order(1)
-        public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+        public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
+                        RegisteredClientRepository registeredClientRepository) throws Exception {
                 OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
                 http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-                                .registeredClientRepository(registeredClientService)
+                                .registeredClientRepository(registeredClientRepository)
                                 .oidc(Customizer.withDefaults()); // 启用OpenID Connect 1.0
 
                 http
@@ -220,14 +231,48 @@ public class SecurityConfig {
         }
 
         /**
-         * OAuth2授权服务 - MyBatis实现（生产环境）
-         * 授权记录持久化到oauth2_authorization表
+         * OAuth2客户端注册仓库 - JDBC标准实现
+         * 替代MybatisOAuth2RegisteredClientService
          */
         @Bean
         @DependsOn("flywayInitializer")
-        public OAuth2AuthorizationService authorizationService(OAuth2AuthorizationMapper authorizationMapper,
+        public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
+            return new JdbcRegisteredClientRepository(jdbcTemplate);
+        }
+
+        /**
+         * OAuth2授权服务 - MyBatis实现（生产环境） - 已被JDBC标准实现替代
+         * 授权记录持久化到oauth2_authorization表
+         */
+         //@Bean
+         //@DependsOn("flywayInitializer")
+         //public OAuth2AuthorizationService authorizationService(
+         //        OAuth2AuthorizationMapper authorizationMapper,
+         //        RegisteredClientRepository registeredClientRepository) {
+         //    return new MyBatisOAuth2AuthorizationService(authorizationMapper, registeredClientRepository);
+         //}
+
+        /**
+         * OAuth2授权服务 - JDBC标准实现
+         * 替代MyBatis实现，使用Spring Security标准表结构和查询
+         */
+        @Bean
+        @DependsOn("flywayInitializer")
+        public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate,
                         RegisteredClientRepository registeredClientRepository) {
-                return new MyBatisOAuth2AuthorizationService(authorizationMapper, registeredClientRepository);
+                return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+        }
+
+        /**
+         * OAuth2授权同意服务 - JDBC标准实现
+         * 处理用户对客户端授权同意的持久化
+         */
+        @Bean
+        @DependsOn("flywayInitializer")
+        public OAuth2AuthorizationConsentService authorizationConsentService(
+                        JdbcTemplate jdbcTemplate,
+                        RegisteredClientRepository registeredClientRepository) {
+                return new JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository);
         }
 
         /**

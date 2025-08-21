@@ -1,5 +1,3 @@
-
-
 # OPENAPI 客户端认证与权限管理系统设计文档
 
 ## 一、设计背景与目标
@@ -21,11 +19,11 @@
 
 ```mermaid
 graph TD
-    A[客户端创建] --> B[配置API权限];
-    B --> C[获取访问令牌(Token)];
-    C --> D[携带Token调用OPENAPI];
-    D --> E[Token校验+权限校验];
-    E --> F[调用业务微服务(传递创建者信息)];
+    A[客户端创建] --> B[配置API权限]
+    B --> C[获取访问令牌Token]
+    C --> D[携带Token调用OPENAPI]
+    D --> E[Token校验+权限校验]
+    E --> F[调用业务微服务传递创建者信息]
 ```
 
 ### 2.2 详细流程说明
@@ -190,11 +188,11 @@ CREATE TABLE sys_credential_resource_rel (
 
 ```mermaid
 erDiagram
-    oauth2_registered_client ||--o{ sys_client_credential : "1对多（固定 openapi -> 多个 appid）"
+    oauth2_registered_client ||--o{ sys_client_credential : "1对多固定openapi到多个appid"
     sys_client_credential ||--o{ sys_credential_resource_rel : "1对多关联"
     sys_resource ||--o{ sys_credential_resource_rel : "1对多关联"
-    sys_user ||--o{ sys_client_credential : "1对多（创建人）"
-    sys_user ||--o{ sys_credential_resource_rel : "1对多（授权人）"
+    sys_user ||--o{ sys_client_credential : "1对多创建人"
+    sys_user ||--o{ sys_credential_resource_rel : "1对多授权人"
 ```
 
 ## 四、权限控制设计
@@ -463,7 +461,3 @@ public boolean checkPermission(HttpServletRequest request, String accessToken) {
   - `authorization_denied_total{reason=no_resource|no_grant|app_disabled}`
 - 日志：结构化输出`traceId, appId, resourceId, path, method, decision, latencyMs`；
 - 告警：连续失败、限流突增、事件处理堆积告警阈值。
-
-```
-
-```
