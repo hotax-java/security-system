@@ -17,6 +17,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -99,7 +100,7 @@ public class RequestLoggingFilter implements Filter {
         String responseBodySummary = responseBody;
         if (responseBody != null && responseBody.length() > 500) {
             // 如果响应体太长，只显示摘要
-            responseBodySummary = responseBody.substring(0, 500) + "... [截断，总长度: " + responseBody.length() + "]";
+            responseBodySummary = responseBody.substring(0, 500) + "... [截断. 总长度: " + responseBody.length() + "]";
         }
 
         log.debug("HTTP响应 <= [Status: {}] [Headers: {}] [Body: {}] [耗时: {}ms]",
@@ -121,19 +122,20 @@ public class RequestLoggingFilter implements Filter {
         }
     }
 
-    private String getResponseBody(ContentCachingResponseWrapper response) {
-        byte[] content = response.getContentAsByteArray();
-        if (content.length == 0) {
-            return "";
+    private String getResponseBody(HttpServletResponse response) {
+        if (response instanceof ContentCachingResponseWrapper) {
+            ContentCachingResponseWrapper wrapper = (ContentCachingResponseWrapper) response;
+            byte[] buf = wrapper.getContentAsByteArray();
+            if (buf.length > 0) {
+                try {
+                    return new String(buf, StandardCharsets.UTF_8);
+                } catch (Exception e) {
+                    log.warn("无法解析响应体编码", e);
+                    return "[无法读取响应体]";
+                }
+            }
         }
-
-        try {
-            String contentEncoding = response.getCharacterEncoding();
-            return new String(content, contentEncoding != null ? contentEncoding : "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            log.warn("无法解析响应体编码", e);
-            return "[无法读取响应体]";
-        }
+        return null;
     }
 
     @Override

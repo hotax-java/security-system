@@ -43,12 +43,12 @@ spring:
         registration:
           webapp-client:
             client-id: webapp-client
-            client-secret: webapp-secret
+            # client-secret: webapp-secret
             authorization-grant-type: authorization_code
             scope: read,write,openid,profile
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             # PKCE和Basic认证共存配置
-            client-authentication-method: basic
+            client-authentication-method: none
         provider:
           webapp-client:
             # issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}
@@ -56,6 +56,11 @@ spring:
             token-uri: https://885ro126ov70.vicp.fun/oauth2/token
             jwk-set-uri: https://885ro126ov70.vicp.fun/oauth2/jwks
             user-info-uri: https://885ro126ov70.vicp.fun/userinfo
+# 自定义配置
+webapp:
+  oauth2:
+    enable-pkce: true # 默认禁用PKCE，使用Basic认证
+    # 可以通过环境变量启用: -Dwebapp.oauth2.enable-pkce=true
 
 # 日志配置
 logging:
@@ -66,8 +71,4 @@ logging:
     com.baomidou.mybatisplus: DEBUG
     org.springframework.web: DEBUG # 添加Web相关日志，方便调试请求/响应
 
-# 自定义配置
-webapp:
-  oauth2:
-    enable-pkce: false # 默认禁用PKCE，使用Basic认证
-    # 可以通过环境变量启用: -Dwebapp.oauth2.enable-pkce=true
+

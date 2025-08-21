@@ -96,12 +96,12 @@ public class OAuth2ClientService {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             // 如果有客户端密钥，使用Basic认证
-            if (StringUtils.hasText(clientRegistration.getClientSecret())) {
-                headers.setBasicAuth(
-                        clientRegistration.getClientId(),
-                        clientRegistration.getClientSecret());
-                log.debug("使用Basic认证方式添加客户端凭证");
-            }
+            //if (StringUtils.hasText(clientRegistration.getClientSecret())) {
+            //    headers.setBasicAuth(
+            //            clientRegistration.getClientId(),
+            //            clientRegistration.getClientSecret());
+            //    log.debug("使用Basic认证方式添加客户端凭证");
+            //}
 
             // 设置请求参数
             MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();

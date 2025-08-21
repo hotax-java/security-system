@@ -26,8 +26,7 @@ export class AuthConfigService {
     
     try {
       // 从后端获取配置
-      const response = await businessApi.get('/api/oauth2/config');
-      this.config = response.data;
+        this.config = await businessApi.get('/api/oauth2/config');
       return this.config || { enablePkce: false };
     } catch (error) {
       console.error('获取认证配置失败:', error);
