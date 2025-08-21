@@ -43,7 +43,7 @@ spring:
         registration:
           webapp-client:
             client-id: webapp-client
-            # client-secret: webapp-secret
+#            client-secret: webapp-secret
             authorization-grant-type: authorization_code
             scope: read,write,openid,profile
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"

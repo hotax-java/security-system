@@ -136,4 +136,10 @@ logging:
   level:
     com.webapp.security.sso.api: DEBUG
     com.webapp.security.sso.oauth2: DEBUG
-    org.springframework.security.oauth2: INFO
+    org.springframework.security.oauth2: DEBUG
+    # Spring Security 过滤器链日志（可查看请求拦截、认证流程）
+    org.springframework.security.web: DEBUG
+    # 端点请求处理日志（如DispatcherServlet分发、参数解析）
+    org.springframework.web.servlet.mvc.method.annotation: DEBUG
+    # HTTP请求/响应日志（包含请求参数、响应状态）
+    org.springframework.web.filter: DEBUG
