@@ -52,33 +52,4 @@ public class WebConfig implements WebMvcConfigurer {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
-
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 显式配置静态资源位置，确保它们能被正确访问
-        registry.addResourceHandler("/**")
-                .addResourceLocations("classpath:/static/")
-                .setCachePeriod(3600)
-                .resourceChain(true);
-
-        // 确保favicon.ico可以被正确加载
-        registry.addResourceHandler("/favicon.ico")
-                .addResourceLocations("classpath:/static/favicon.ico");
-
-        // 确保manifest.json可以被正确加载
-        registry.addResourceHandler("/manifest.json")
-                .addResourceLocations("classpath:/static/manifest.json");
-    }
-
-    @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
-        // 将根路径映射到index.html
-        registry.addViewController("/").setViewName("forward:/index.html");
-
-        // 明确映射前端路由路径，而不是使用复杂的正则表达式
-        registry.addViewController("/login").setViewName("forward:/index.html");
-        registry.addViewController("/test").setViewName("forward:/index.html");
-        registry.addViewController("/test/admin-auth-initiator").setViewName("forward:/index.html");
-        registry.addViewController("/test/oauth2-callback").setViewName("forward:/index.html");
-    }
 }
