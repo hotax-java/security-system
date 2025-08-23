@@ -3,6 +3,11 @@ server:
   port: 9000
   servlet:
     context-path: /
+    # HTTP编码配置
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   profiles:
@@ -58,6 +63,12 @@ spring:
           min-idle: 0
           max-wait: -1ms
 
+  # Thymeleaf配置
+  thymeleaf:
+    encoding: UTF-8
+    mode: HTML
+    cache: false
+
 # MyBatis-Plus配置
 mybatis-plus:
   configuration:
@@ -91,7 +102,7 @@ oauth2:
   wechat:
     app-id: ${WECHAT_APP_ID:}
     app-secret: ${WECHAT_APP_SECRET:0ed86594047220b717cda81a1b355e23}
-    redirect-uri: ${WECHAT_REDIRECT_URI:https://885ro126ov70.vicp.fun/oauth2/wechat/callback}
+    redirect-uri: ${WECHAT_REDIRECT_URI:${oauth2.server.base-url}/oauth2/wechat/callback}
     authorize-url: https://open.weixin.qq.com/connect/qrconnect
     access-token-url: https://api.weixin.qq.com/sns/oauth2/access_token
     user-info-url: https://api.weixin.qq.com/sns/userinfo
@@ -101,7 +112,7 @@ oauth2:
   github:
     app-id: ${GITHUB_APP_ID:}
     app-secret: ${GITHUB_APP_SECRET:}
-    redirect-uri: ${GITHUB_REDIRECT_URI:https://885ro126ov70.vicp.fun/oauth2/github/callback}
+    redirect-uri: ${GITHUB_REDIRECT_URI:${oauth2.server.base-url}/oauth2/github/callback}
     authorize-url: https://github.com/login/oauth/authorize
     token-url: https://github.com/login/oauth/access_token
     user-info-url: https://api.github.com/user
@@ -115,7 +126,7 @@ oauth2:
     private-key: ${ALIPAY_PRIVATE_KEY:}
     public-key: ${ALIPAY_PUBLIC_KEY:}
     gateway-url: https://openapi.alipay.com/gateway.do
-    redirect-uri: https://885ro126ov70.vicp.fun/oauth2/alipay/callback
+    redirect-uri: ${oauth2.server.base-url}/oauth2/alipay/callback
     frontend-callback-url: ${oauth2.frontend.callback-url}
 
 # 自定义JWT配置

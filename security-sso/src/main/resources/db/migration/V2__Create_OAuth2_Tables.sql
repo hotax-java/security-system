@@ -95,7 +95,7 @@ INSERT IGNORE INTO oauth2_registered_client (
     '{noop}webapp-secret',
     'client_secret_basic,client_secret_post',
     'authorization_code,refresh_token,client_credentials',
-    'http://localhost:8080/login/oauth2/code/webapp-client,http://localhost:8080/authorized',
+    'https://885ro126ov70.vicp.fun/login/oauth2/code/webapp-client,https://885ro126ov70.vicp.fun/authorized,https://885ro126ov70.vicp.fun/test/callback',
     'read,write,openid,profile',
     '{"@class":"java.util.LinkedHashMap","settings.client.require-authorization-consent":false,"settings.client.require-proof-key":false}',
     '{"@class":"java.util.LinkedHashMap","settings.token.reuse-refresh-tokens":true,"settings.token.id-token-signature-algorithm":["org.springframework.security.oauth2.jose.jws.SignatureAlgorithm","RS256"],"settings.token.access-token-time-to-live":["java.time.Duration",3600.000000000],"settings.token.refresh-token-time-to-live":["java.time.Duration",7200.000000000]}'

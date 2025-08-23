@@ -1,5 +1,7 @@
 package com.webapp.security.admin.auth.oauth2.model;
 
+import lombok.Data;
+
 import java.io.Serializable;
 
 /**
@@ -14,6 +16,7 @@ public class TokenResponse implements Serializable {
     private String refresh_token;
     private long expires_in;
     private String scope;
+    private String id_token;
 
     // 默认构造函数
     public TokenResponse() {
@@ -69,6 +72,13 @@ public class TokenResponse implements Serializable {
         this.scope = scope;
     }
 
+    public String getId_token() {
+        return id_token;
+    }
+
+    public void setId_token(String id_token) {
+        this.id_token = id_token;
+    }
     @Override
     public String toString() {
         return "TokenResponse{" +
@@ -77,6 +87,7 @@ public class TokenResponse implements Serializable {
                 ", refresh_token='" + (refresh_token != null ? "******" : null) + '\'' +
                 ", expires_in=" + expires_in +
                 ", scope='" + scope + '\'' +
+                ", id_token='" + id_token + '\'' +
                 '}';
     }
 }

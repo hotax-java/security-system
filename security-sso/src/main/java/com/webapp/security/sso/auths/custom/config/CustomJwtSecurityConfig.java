@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 自定义JWT安全配置
  * 可以通过配置开关启用或禁用
  */
-@Configuration
+//@Configuration
 // @EnableWebSecurity
 @ConditionalOnProperty(name = "custom.jwt.enabled", havingValue = "true", matchIfMissing = false)
 public class CustomJwtSecurityConfig {

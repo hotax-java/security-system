@@ -51,7 +51,7 @@ public class OpenApiTokenController {
     private final OAuth2TokenGenerator<OAuth2Token> tokenGenerator;
     private final TokenIntrospectionService introspectionService;
 
-    @Value("${oauth2.server.base-url:http://localhost:8080}")
+    @Value("${oauth2.server.base-url:https://885ro126ov70.vicp.fun}")
     private String serverBaseUrl;
 
     // 固定的OAuth2客户端配置

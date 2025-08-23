@@ -128,7 +128,7 @@ public class SecurityConfig {
                                                                 "/.well-known/jwks.json",
                                                                 "/api/token-blacklist/**", "/favicon.ico",
                                                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                                                "/error", "/oauth2/**/**")
+                                                                "/error", "/test/**", "/debug/**")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
@@ -224,8 +224,7 @@ public class SecurityConfig {
                                 jwtGenerator,
                                 authorizationCodeGenerator,
                                 shortOpaqueTokenGenerator,
-                                refreshTokenGenerator
-                                );
+                                refreshTokenGenerator);
         }
 
         /**

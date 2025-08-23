@@ -16,7 +16,10 @@ import org.springframework.web.client.RestTemplate;
 import com.webapp.security.admin.auth.oauth2.model.TokenRequest;
 import com.webapp.security.admin.auth.oauth2.model.TokenResponse;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * OAuth2客户端服务，支持两种方式获取token：
@@ -34,7 +37,7 @@ public class OAuth2ClientService {
     @Resource
     private RestTemplate restTemplate;
 
-    @Value("${spring.security.oauth2.client.registration.webapp-client.client-authentication-method: none}")
+    @Value("${spring.security.oauth2.client.registration.webapp-client.client-authentication-method:none}")
     private String clientAuthenticationMethod;
 
     @Value("${webapp.oauth2.redirect-uri:http://localhost:8081/oauth2/callback}")
@@ -44,7 +47,8 @@ public class OAuth2ClientService {
      * 检查是否启用了PKCE
      */
     public boolean isPkceEnabled() {
-        return "none".equals(clientAuthenticationMethod);
+        Set<String> method = Arrays.stream(clientAuthenticationMethod.split(",")).collect(Collectors.toSet());
+        return method.contains("none");
     }
 
     /**
@@ -57,12 +61,12 @@ public class OAuth2ClientService {
     public TokenResponse exchangeToken(TokenRequest request) {
         try {
             // 根据请求中是否包含codeVerifier来决定使用何种方式
-            if (StringUtils.hasText(request.getCodeVerifier())) {
+            if (!isPkceEnabled()) {
+                log.warn("PKCE已启用，使用非PKCE模式");
+                return exchangeTokenWithBasicAuth(request);
+            } else if (isPkceEnabled() && StringUtils.hasText(request.getCodeVerifier())) {
                 log.debug("检测到codeVerifier，使用PKCE方式交换令牌");
                 return exchangeTokenWithPkce(request);
-            } else if (isPkceEnabled()) {
-                log.warn("PKCE已启用但请求中无codeVerifier，降级为非PKCE模式");
-                return exchangeTokenWithBasicAuth(request);
             } else {
                 log.debug("使用非PKCE方式交换令牌");
                 return exchangeTokenWithBasicAuth(request);
@@ -94,12 +98,12 @@ public class OAuth2ClientService {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             // 如果有客户端密钥，使用Basic认证
-            //if (StringUtils.hasText(clientRegistration.getClientSecret())) {
-            //    headers.setBasicAuth(
-            //            clientRegistration.getClientId(),
-            //            clientRegistration.getClientSecret());
-            //    log.debug("使用Basic认证方式添加客户端凭证");
-            //}
+            if (StringUtils.hasText(clientRegistration.getClientSecret())) {
+                headers.setBasicAuth(
+                        clientRegistration.getClientId(),
+                        clientRegistration.getClientSecret());
+                log.debug("使用Basic认证方式添加客户端凭证");
+            }
 
             // 设置请求参数
             MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();

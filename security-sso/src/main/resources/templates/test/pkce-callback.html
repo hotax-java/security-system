@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth2 授权回调</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 10px;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>OAuth2 授权回调</h1>
+
+    <div class="container">
+        <h2>授权结果</h2>
+        <div id="authResult">正在处理授权结果...</div>
+    </div>
+
+    <div class="container">
+        <h2>操作</h2>
+        <p>
+            <a href="/test/pkce/test" id="returnLink">返回测试页面</a>
+        </p>
+    </div>
+
+    <script>
+        // 解析URL参数
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // 页面加载时处理授权回调
+        window.onload = function () {
+            const code = getUrlParameter('code');
+            const state = getUrlParameter('state');
+            const error = getUrlParameter('error');
+            const errorDescription = getUrlParameter('error_description');
+
+            const resultDiv = document.getElementById('authResult');
+            const returnLink = document.getElementById('returnLink');
+
+            if (error) {
+                resultDiv.innerHTML = `
+                    <h3>授权失败</h3>
+                    <p>错误: ${error}</p>
+                    <p>描述: ${errorDescription || '无'}</p>
+                `;
+            } else if (code) {
+                resultDiv.innerHTML = `
+                    <h3>授权成功</h3>
+                    <p>授权码: ${code}</p>
+                    <p>状态: ${state || '无'}</p>
+                    <p>请将此授权码复制到测试页面以继续。</p>
+                `;
+
+                // 更新返回链接，附带授权码和状态
+                sessionStorage.setItem('auth_code', code);
+                sessionStorage.setItem('auth_state', state || '');
+                returnLink.href = `/test/pkce/test?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+
+                // 自动跳转回测试页面
+                resultDiv.innerHTML += '<p>1秒后自动返回测试页面...</p>';
+                setTimeout(function () {
+                    window.location.href = returnLink.href;
+                }, 1000);
+            } else {
+                resultDiv.innerHTML = `
+                    <h3>无效的回调</h3>
+                    <p>未找到授权码或错误信息。</p>
+                `;
+            }
+        };
+    </script>
+</body>
+
+</html>

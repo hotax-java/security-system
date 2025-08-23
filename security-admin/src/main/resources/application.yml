@@ -43,12 +43,12 @@ spring:
         registration:
           webapp-client:
             client-id: webapp-client
-#            client-secret: webapp-secret
-            authorization-grant-type: authorization_code
-            scope: read,write,openid,profile
+            client-secret: webapp-secret
+            authorization-grant-type: authorization_code,refresh_token
+            scope: read,write,openid,profile,offline_access
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             # PKCE和Basic认证共存配置
-            client-authentication-method: none
+            client-authentication-method: none,Basic
         provider:
           webapp-client:
             # issuer-uri: ${ISSUER_URI:https://885ro126ov70.vicp.fun}

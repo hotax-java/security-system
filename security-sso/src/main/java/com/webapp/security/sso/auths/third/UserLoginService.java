@@ -36,7 +36,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY;
@@ -109,12 +111,15 @@ public class UserLoginService {
                                         .build()
                                         .toUriString();
 
-                        // 创建带有必要authorizationUri的授权请求对象
+                        // 创建带有必要authorizationUri的授权请求对象，确保包含offline_access scope
+                        Set<String> scopes = new HashSet<>(registeredClient.getScopes());
+                        scopes.add("offline_access");
+                        
                         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
                                         .authorizationUri(authorizationUri) // 使用配置的授权端点
                                         .clientId(registeredClient.getClientId())
                                         .redirectUri(frontendCallbackUrl)
-                                        .scopes(registeredClient.getScopes())
+                                        .scopes(scopes)
                                         .state(state)
                                         .additionalParameters(additionalParameters)
                                         .build();
@@ -189,17 +194,22 @@ public class UserLoginService {
 
                         // 添加PKCE相关参数到additionalParameters
                         Map<String, Object> additionalParameters = new HashMap<>();
+                        additionalParameters.put("access_type", "offline");
                         additionalParameters.put(OAuth2ParameterNames.STATE, combinedState);
                         additionalParameters.put("code_challenge", codeChallenge);
                         additionalParameters.put("code_challenge_method",
                                         codeChallengeMethod != null ? codeChallengeMethod : "S256");
 
                         // 创建带有必要authorizationUri和PKCE参数的授权请求对象
+                        // 确保包含offline_access scope以获取refresh_token
+                        Set<String> scopes = new HashSet<>(registeredClient.getScopes());
+                        scopes.add("offline_access");
+                        
                         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
                                         .authorizationUri(authorizationUri)
                                         .clientId(registeredClient.getClientId())
                                         .redirectUri(frontendCallbackUrl)
-                                        .scopes(registeredClient.getScopes())
+                                        .scopes(scopes)
                                         .state(state)
                                         .additionalParameters(additionalParameters)
                                         .build();
@@ -248,8 +258,8 @@ public class UserLoginService {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 if (request != null) {
-                    HttpSession session = request.getSession(true);
-                    session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+                        HttpSession session = request.getSession(true);
+                        session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
                 }
                 return authentication;
         }

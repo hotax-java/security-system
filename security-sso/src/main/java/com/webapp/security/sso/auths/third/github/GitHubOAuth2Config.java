@@ -25,7 +25,7 @@ public class GitHubOAuth2Config {
     /**
      * 回调地址
      */
-    private String redirectUri = "http://localhost:9000/auth/github/callback";
+    private String redirectUri = "https://885ro126ov70.vicp.fun/auth/github/callback";
 
     /**
      * 授权URL

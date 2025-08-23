@@ -113,7 +113,7 @@ java -jar security-sso-1.0.0.jar --spring.profiles.active=prod
 ### 环境变量
 ```bash
 # 数据库配置
-export DB_URL=jdbc:mysql://localhost:3306/security_system
+export DB_URL=jdbc:mysql://your-database-host:3306/security_system
 export DB_USERNAME=root
 export DB_PASSWORD=password
 
@@ -165,4 +165,4 @@ redis-cli keys "token:blacklist:*" | wc -l
 
 # 检查应用日志
 tail -f logs/security-sso.log
-``` 
+```
