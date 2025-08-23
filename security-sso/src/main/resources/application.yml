@@ -68,7 +68,9 @@ spring:
     encoding: UTF-8
     mode: HTML
     cache: false
-
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 # MyBatis-Plus配置
 mybatis-plus:
   configuration:

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './views/login/Login';
 import Dashboard from './views/dashboard/Dashboard';
-import ThirdPartyCallback from './views/login/ThirdPartyCallback';
+import Callback from './views/login/Callback';
 import ErrorPage from './views/login/ErrorPage';
 import { TokenManager } from './services/tokenManager';
 import './App.css';
@@ -41,9 +41,9 @@ const App: React.FC = () => {
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
           } />
-          {/* 第三方登录回调路由 */}
-          <Route path="/oauth2/callback" element={
-            <ThirdPartyCallback onLogin={handleLogin} />
+          {/* OAuth2授权码登录回调路由 */}
+          <Route path="/callback" element={
+            <Callback onLogin={handleLogin} />
           } />
           <Route path="/error" element={<ErrorPage />} />
           <Route path="/*" element={

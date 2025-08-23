@@ -1,5 +1,11 @@
 # 开发环境配置
 
+# Spring MVC配置
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER # 使用Ant风格的路径匹配策略，支持更复杂的路径模式
+
 # 日志配置 - 开发环境详细日志
 logging:
   level:

@@ -79,7 +79,7 @@ public class SecurityConfig {
                                 .oidc(Customizer.withDefaults()); // 启用OpenID Connect 1.0
 
                 http
-                                // 重定向到登录页面，当未认证的用户尝试访问受保护的端点时
+                                // 重定向到前端登录页面，当未认证的用户尝试访问受保护的端点时
                                 .exceptionHandling((exceptions) -> exceptions
                                                 .defaultAuthenticationEntryPointFor(
                                                                 new LoginUrlAuthenticationEntryPoint("/login"),
@@ -112,7 +112,7 @@ public class SecurityConfig {
                                 .httpBasic(Customizer.withDefaults())
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                                                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS));
                 return http.build();
         }
 
@@ -128,11 +128,14 @@ public class SecurityConfig {
                                                                 "/.well-known/jwks.json",
                                                                 "/api/token-blacklist/**", "/favicon.ico",
                                                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                                                "/error", "/test/**", "/debug/**")
+                                                                "/error", "/test/**", "/debug/**",
+                                                                "/static/**", "/index.html", "/*.js", "/*.css",
+                                                                "/*.ico")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
                                                 .loginPage("/login")
+                                                .loginProcessingUrl("/login")
                                                 .permitAll())
                                 .logout(logout -> logout
                                                 .logoutSuccessUrl("/login?logout")
@@ -140,7 +143,10 @@ public class SecurityConfig {
                                                 .permitAll())
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                                                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                                                .sessionFixation().none() // 不要迁移会话，保持同一会话ID
+                                                .maximumSessions(1) // 限制每个用户只能有一个会话
+                                                .expiredUrl("/login"));
 
                 return http.build();
         }
@@ -236,19 +242,6 @@ public class SecurityConfig {
         public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
                 return new JdbcRegisteredClientRepository(jdbcTemplate);
         }
-
-        /**
-         * OAuth2授权服务 - MyBatis实现（生产环境） - 已被JDBC标准实现替代
-         * 授权记录持久化到oauth2_authorization表
-         */
-        // @Bean
-        // @DependsOn("flywayInitializer")
-        // public OAuth2AuthorizationService
-        // authorizationService(OAuth2AuthorizationMapper authorizationMapper,
-        // RegisteredClientRepository registeredClientRepository) {
-        // return new MyBatisOAuth2AuthorizationService(authorizationMapper,
-        // registeredClientRepository);
-        // }
 
         /**
          * OAuth2授权服务 - JDBC标准实现

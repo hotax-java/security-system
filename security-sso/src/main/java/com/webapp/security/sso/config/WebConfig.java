@@ -9,6 +9,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -32,12 +34,16 @@ public class WebConfig implements WebMvcConfigurer {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        config.addAllowedOriginPattern("*"); // 允许所有源
-        config.addAllowedHeader("*"); // 允许所有头部
-        config.addAllowedMethod("*"); // 允许所有方法
-        config.setAllowCredentials(true); // 允许携带认证信息
-        config.setMaxAge(3600L); // 预检请求缓存时间
+        // 注意：这是开发环境的宽松配置
+        // 生产环境应该限制为特定的来源、方法和头部
+        config.addAllowedOriginPattern("*"); // 开发环境允许所有源
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        config.setAllowCredentials(true); // 必须设置为true以允许认证信息（如cookie）跨域传输
+        config.setMaxAge(3600L);
 
+        // 由于前后端整合在同一域下运行，此CORS配置主要用于开发环境
+        // 一旦前端构建到static目录，同域请求将不再需要CORS
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
@@ -45,5 +51,34 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 显式配置静态资源位置，确保它们能被正确访问
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(3600)
+                .resourceChain(true);
+
+        // 确保favicon.ico可以被正确加载
+        registry.addResourceHandler("/favicon.ico")
+                .addResourceLocations("classpath:/static/favicon.ico");
+
+        // 确保manifest.json可以被正确加载
+        registry.addResourceHandler("/manifest.json")
+                .addResourceLocations("classpath:/static/manifest.json");
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // 将根路径映射到index.html
+        registry.addViewController("/").setViewName("forward:/index.html");
+
+        // 明确映射前端路由路径，而不是使用复杂的正则表达式
+        registry.addViewController("/login").setViewName("forward:/index.html");
+        registry.addViewController("/test").setViewName("forward:/index.html");
+        registry.addViewController("/test/admin-auth-initiator").setViewName("forward:/index.html");
+        registry.addViewController("/test/oauth2-callback").setViewName("forward:/index.html");
     }
 }

@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "antd": "^5.27.1",
+    "axios": "^1.11.0",
+    "react-router-dom": "^7.8.2"
+  },
+  "devDependencies": {
+    "http-proxy-middleware": "^3.0.5"
+  }
+}

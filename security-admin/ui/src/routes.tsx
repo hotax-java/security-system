@@ -1,23 +1,21 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import ThirdPartyCallback from './views/login/ThirdPartyCallback';
+import Callback from './views/login/Callback';
 import { TokenManager } from './services/tokenManager';
 
 /**
- * 第三方登录路由配置
- * 这个文件包含所有第三方登录的通用回调路由
- * 需要在主应用的路由配置中添加这个路由
+ * OAuth2授权码登录回调路由配置
+ * 处理PKCE模式的授权码登录回调
  */
 const handleLogin = (userData: any, token: string) => {
   // 保存用户信息
   TokenManager.saveUserInfo(userData);
 };
 
-const ThirdPartyRoutes = [
+const OAuth2Routes = [
   {
-    path: "/oauth2/callback",
-    element: <ThirdPartyCallback onLogin={handleLogin} />
+    path: "/callback",
+    element: <Callback onLogin={handleLogin} />
   }
 ];
 
-export default ThirdPartyRoutes; 
+export default OAuth2Routes; 
