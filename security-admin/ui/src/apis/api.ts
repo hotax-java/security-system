@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { authService } from '../services/authService';
 import { TokenManager } from '../services/tokenManager';
+import { AuthConfigService } from '../services/authConfigService';
 
 // ===== API实例创建和配置 =====
 /**
@@ -76,7 +77,7 @@ const requestInterceptor = async (config: any) => {
         throw new Error('Failed to obtain valid token after refresh');
       }
     } catch (error) {
-      // 如果刷新失败，重定向到登录页
+      // 如果刷新失败，重定向到本地登录页
       console.error('Failed to refresh token in request interceptor:', error);
       TokenManager.clearTokens();
       window.location.replace('/login');
@@ -191,7 +192,7 @@ const responseErrorInterceptor = async (error: any) => {
       } catch (refreshError) {
         console.error('Token refresh failed during 401 handling:', refreshError);
         
-        // 如果刷新token失败，清除token并跳转到登录页
+        // 如果刷新token失败，清除token并跳转到本地登录页
         TokenManager.clearTokens();
         window.location.replace('/login'); // 使用replace防止历史记录问题
         
@@ -232,7 +233,7 @@ const responseErrorInterceptor = async (error: any) => {
       if (errorMessage.toLowerCase().includes('token') || 
           errorMessage.toLowerCase().includes('auth') || 
           errorMessage.toLowerCase().includes('unauthorized')) {
-                  console.log('Token可能无效，尝试清除并跳转登录页');
+                  console.log('Token可能无效，尝试清除并跳转本地登录页');
           TokenManager.clearTokens();
           window.location.replace('/login'); // 使用replace防止历史记录问题
       }

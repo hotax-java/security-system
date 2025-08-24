@@ -5,7 +5,17 @@ import Dashboard from './views/dashboard/Dashboard';
 import Callback from './views/login/Callback';
 import ErrorPage from './views/login/ErrorPage';
 import { TokenManager } from './services/tokenManager';
+import { AuthConfigService } from './services/authConfigService';
 import './App.css';
+
+// 重定向到本地登录页面的组件
+const RedirectToLogin: React.FC = () => {
+  useEffect(() => {
+    window.location.replace('/login');
+  }, []);
+  
+  return null;
+};
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -42,12 +52,12 @@ const App: React.FC = () => {
             isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
           } />
           {/* OAuth2授权码登录回调路由 */}
-          <Route path="/callback" element={
+          <Route path="/oauth2/callback" element={
             <Callback onLogin={handleLogin} />
           } />
           <Route path="/error" element={<ErrorPage />} />
           <Route path="/*" element={
-            isAuthenticated ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />
+            isAuthenticated ? <Dashboard user={user} onLogout={handleLogout} /> : <RedirectToLogin />
           } />
         </Routes>
       </div>

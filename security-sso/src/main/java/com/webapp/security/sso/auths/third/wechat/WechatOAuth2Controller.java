@@ -5,10 +5,8 @@ import com.webapp.security.core.entity.SysWechatUser;
 import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
-import com.webapp.security.sso.auths.third.UserLoginService;
+import com.webapp.security.sso.auths.third.*;
 import com.webapp.security.sso.auths.third.wechat.WechatUserService.WechatUserInfo;
-import com.webapp.security.sso.auths.third.AuthorizationCodeService;
-import com.webapp.security.sso.auths.third.PkceStateStore;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +44,7 @@ public class WechatOAuth2Controller {
     private WechatUserService wechatUserService;
 
     @Autowired
-    private WechatOAuth2StateService stateService;
+    private OAuth2StateService stateService;
 
     @Autowired
     private UserLoginService userLoginService;
@@ -75,9 +73,16 @@ public class WechatOAuth2Controller {
     @GetMapping("/authorize")
     public RedirectView authorize(
             @RequestParam(required = false) String code_challenge,
-            @RequestParam(required = false) String code_challenge_method) {
-        // 生成并存储state，用于验证回调请求
-        String state = stateService.generateAndSaveState();
+            @RequestParam(required = false) String code_challenge_method,
+            @RequestParam(required = false) String state) {
+        // state必须从外部传入，不能为空
+        if (state == null || state.isEmpty()) {
+            throw new IllegalArgumentException("state参数不能为空，必须从外部传入");
+        }
+
+        // 保存外部传入的state到stateService中用于后续验证
+        stateService.saveState(state, ThirdLoginRedisConstant.WECHAT_STATE_PREFIX,
+                ThirdLoginRedisConstant.STATE_EXPIRE_SECONDS);
 
         // 如果提供了code_challenge，则存储PKCE参数
         if (code_challenge != null && !code_challenge.isEmpty()) {
@@ -99,7 +104,7 @@ public class WechatOAuth2Controller {
     public ResponseEntity<?> callback(@RequestParam String code, @RequestParam String state)
             throws UnsupportedEncodingException {
         // 验证state，防止CSRF攻击
-        if (!stateService.validateState(state)) {
+        if (!stateService.validateState(state, ThirdLoginRedisConstant.WECHAT_STATE_PREFIX)) {
             // 重定向到前端错误页面
             String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
                     .queryParam("error", URLEncoder.encode("无效的state参数，可能是CSRF攻击", StandardCharsets.UTF_8.name()))

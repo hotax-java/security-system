@@ -4,10 +4,8 @@ import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.core.service.SysAlipayUserService;
 import com.webapp.security.core.service.SysUserService;
+import com.webapp.security.sso.auths.third.*;
 import com.webapp.security.sso.auths.third.alipay.AlipayUserService.AlipayUserInfo;
-import com.webapp.security.sso.auths.third.UserLoginService;
-import com.webapp.security.sso.auths.third.AuthorizationCodeService;
-import com.webapp.security.sso.auths.third.PkceStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +42,7 @@ public class AlipayOAuth2Controller {
     private AlipayUserService alipayUserService;
 
     @Autowired
-    private AlipayOAuth2StateService stateService;
+    private OAuth2StateService stateService;
 
     @Autowired
     private UserLoginService userLoginService;
@@ -67,9 +65,15 @@ public class AlipayOAuth2Controller {
     @GetMapping("/authorize")
     public RedirectView authorize(
             @RequestParam(required = false) String code_challenge,
-            @RequestParam(required = false) String code_challenge_method) {
-        // 使用stateService生成state
-        String state = stateService.generateAndSaveState();
+            @RequestParam(required = false) String code_challenge_method,
+            @RequestParam(required = false) String state) {
+        // state必须从外部传入，不能为空
+        if (state == null || state.isEmpty()) {
+            throw new IllegalArgumentException("state参数不能为空，必须从外部传入");
+        }
+        
+        // 保存外部传入的state到stateService中用于后续验证
+        stateService.saveState(state, ThirdLoginRedisConstant.ALIPAY_STATE_PREFIX, ThirdLoginRedisConstant.STATE_EXPIRE_SECONDS);
 
         // 如果提供了code_challenge，则存储PKCE参数
         if (code_challenge != null && !code_challenge.isEmpty()) {
@@ -94,7 +98,7 @@ public class AlipayOAuth2Controller {
             @RequestParam("state") String state) throws UnsupportedEncodingException {
         logger.info("支付宝OAuth2回调处理， state： {}", state);
         // 使用stateService验证state
-        if (!stateService.validateState(state)) {
+        if (!stateService.validateState(state, ThirdLoginRedisConstant.ALIPAY_STATE_PREFIX)) {
             // 重定向到前端错误页面
             String redirectUrl = UriComponentsBuilder.fromUriString(alipayConfig.getFrontendCallbackUrl())
                     .queryParam("error", URLEncoder.encode("无效的state参数，可能是CSRF攻击", StandardCharsets.UTF_8.name()))

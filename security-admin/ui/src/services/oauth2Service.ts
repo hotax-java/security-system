@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { PkceUtils } from '../utils/pkceUtils';
 import { TokenResponse, TokenRequestParams, OAuth2Error } from '../types/oauth2';
 
 // 创建专用的OAuth2请求实例
@@ -74,5 +75,19 @@ export const oauth2Service = {
    */
   generateState: (): string => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  },
+
+  /**
+   * 通过state获取本地存储的code_verifier
+   * @param state 状态参数
+   * @returns Promise<string | null>
+   */
+  getCodeVerifierByState: async (state: string): Promise<string | null> => {
+    try {
+      return PkceUtils.getCodeVerifierByState(state);
+    } catch (error) {
+      console.error('获取code_verifier失败:', error);
+      return null;
+    }
   },
 };

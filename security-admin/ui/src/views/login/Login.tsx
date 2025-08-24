@@ -1,12 +1,10 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card, message, Typography, Space, Divider } from "antd";
 import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined, GithubOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService";
 import { AuthConfigService } from "../../services/authConfigService";
 import { PkceUtils } from "../../utils/pkceUtils";
-
-// API基础URL
-const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'https://885ro126ov70.vicp.fun';
+import { PkceApiService } from "../../services/pkceApiService";
 
 const { Title, Text } = Typography;
 
@@ -18,28 +16,96 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [pkceEnabled, setPkceEnabled] = useState<boolean>(false);
+  const [ssoEnabled, setSsoEnabled] = useState<boolean>(false);
+  const [supportedPlatforms, setSupportedPlatforms] = useState<string[]>([]);
   
-  // 获取认证配置
+  // 获取认证配置并处理SSO跳转 - 每次进入页面都检查
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const isEnabled = await AuthConfigService.isPkceEnabled();
-        setPkceEnabled(isEnabled);
-        console.log(`PKCE ${isEnabled ? '已启用' : '已禁用'}`);
+        console.log('检查认证配置...');
+        const isPkceEnabled = await AuthConfigService.isPkceEnabled();
+        const isSsoEnabled = AuthConfigService.isSSO();
+        const platforms = AuthConfigService.getSupportedPlatforms();
+        
+        setPkceEnabled(isPkceEnabled);
+        setSsoEnabled(isSsoEnabled);
+        setSupportedPlatforms(platforms);
+        
+        console.log(`PKCE ${isPkceEnabled ? '已启用' : '已禁用'}`);
+        console.log(`SSO ${isSsoEnabled ? '已启用' : '已禁用'}`);
+        console.log('支持的第三方平台:', platforms);
+        
+        // 如果启用了SSO，直接跳转到SSO登录页面
+        if (isSsoEnabled) {
+          let loginUrl = AuthConfigService.getLoginUrl(window.location.pathname);
+          
+          // 如果启用了PKCE，调用后端API生成PKCE参数
+          if (isPkceEnabled) {
+            try {
+              const pkceParams = await PkceApiService.generatePkceParams();
+              console.log('从后端获取PKCE参数:', {
+                state: pkceParams.state,
+                codeChallenge: pkceParams.codeChallenge,
+                codeChallengeMethod: pkceParams.codeChallengeMethod
+              });
+              
+              const urlParams = new URLSearchParams({
+                state: pkceParams.state,
+                code_challenge: pkceParams.codeChallenge,
+                code_challenge_method: pkceParams.codeChallengeMethod
+              });
+              
+              // 将PKCE参数添加到登录URL
+              const separator = loginUrl.includes('?') ? '&' : '?';
+              loginUrl = loginUrl + separator + urlParams.toString();
+              
+              console.log('SSO登录URL（含PKCE参数）:', loginUrl);
+            } catch (error) {
+              console.error('获取PKCE参数失败:', error);
+              // 即使PKCE参数获取失败，也继续跳转到SSO（不带PKCE参数）
+            }
+          }
+          
+          console.log('SSO模式已启用，跳转到SSO登录页面:', loginUrl);
+          window.location.href = loginUrl;
+          return;
+        }
       } catch (error) {
         console.error('获取认证配置失败:', error);
       }
     };
     
     loadConfig();
-  }, []);
+    
+    // 监听页面可见性变化，当页面重新可见时重新检查配置
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('页面重新可见，重新检查配置');
+        loadConfig();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // 清理事件监听器
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [window.location.pathname]); // 依赖路径变化，确保路由切换时重新检查
 
   const handleSubmit = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
+      // 本地登录模式
       const response = await authService.login(values.username, values.password);
       if (response.access_token) {
         message.success("登录成功");
+        
+        // 登录成功后清理localStorage中的PKCE相关参数
+        PkceUtils.clearAllPkceParams();
+        console.log('登录成功，已清理PKCE参数');
+        
         // 使用access_token作为token，用户信息暂时使用用户名
         onLogin({ username: values.username }, response.access_token);
       } else {
@@ -60,22 +126,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   // 处理第三方登录
   const handleThirdPartyLogin = async (platform: string) => {
     try {
+      // 检查平台是否支持
+      if (!AuthConfigService.isPlatformSupported(platform)) {
+        message.error(`不支持${platform}登录`);
+        return;
+      }
+      
       if (pkceEnabled) {
-        // PKCE模式
-        const pkceParams = await PkceUtils.preparePkceParams();
-        
-        // 存储code_verifier
-        PkceUtils.storeCodeVerifier(pkceParams.codeVerifier);
-        
-        // 跳转到SSO的第三方授权页面，携带PKCE参数
-        window.location.href = `${API_BASE_URL}/oauth2/${platform}/authorize` +
-          `?code_challenge=${encodeURIComponent(pkceParams.codeChallenge)}` +
-          `&code_challenge_method=${encodeURIComponent(pkceParams.codeChallengeMethod)}`;
-        
-        console.log(`使用PKCE模式发起${platform}登录`);
+        // PKCE模式：调用后端API生成PKCE参数
+        try {
+          const pkceParams = await PkceApiService.generatePkceParams();
+          console.log(`从后端获取${platform}登录PKCE参数:`, {
+            state: pkceParams.state,
+            codeChallenge: pkceParams.codeChallenge,
+            codeChallengeMethod: pkceParams.codeChallengeMethod
+          });
+          
+          // 使用配置管理器获取第三方授权URL
+          const authUrl = AuthConfigService.getThirdPartyAuthUrl(platform, {
+            codeChallenge: pkceParams.codeChallenge,
+            codeChallengeMethod: pkceParams.codeChallengeMethod,
+            state: pkceParams.state
+          });
+          
+          window.location.href = authUrl;
+        } catch (error) {
+          console.error(`获取${platform}登录PKCE参数失败:`, error);
+          message.error(`获取${platform}登录参数失败，请稍后重试`);
+          return;
+        }
       } else {
         // 传统模式
-        window.location.href = `${API_BASE_URL}/oauth2/${platform}/authorize`;
+        const authUrl = AuthConfigService.getThirdPartyAuthUrl(platform);
+        window.location.href = authUrl;
         console.log(`使用传统模式发起${platform}登录`);
       }
     } catch (error) {
@@ -191,48 +274,70 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </Divider>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px' }}>
-            <Button 
-              type="text" 
-              shape="circle" 
-              size="large"
-              icon={<WechatOutlined style={{ fontSize: '24px', color: '#07C160' }} />} 
-              onClick={handleWechatLogin}
-              title="微信登录"
-            />
-            <Button 
-              type="text" 
-              shape="circle" 
-              size="large"
-              icon={<GithubOutlined style={{ fontSize: '24px' }} />} 
-              onClick={handleGithubLogin}
-              title="GitHub登录"
-            />
-            <Button 
-              type="text" 
-              shape="circle" 
-              size="large"
-              icon={
-                <svg viewBox="0 0 1024 1024" width="24" height="24" fill="#1677FF">
-                  <path d="M230.1 630.2l-76.9 132.9h152.2l76.9-132.9H230.1z m224.2-387.7l-76.9 133h304.4l76.9-133H454.3z m0 258.5l-76.9 133h228.2l76.9-133H454.3z m380.5-258.5h-76.2l-76.9 133h152.2l76.9-133h-76z m0 258.5h-76.2l-76.9 133h152.2l76.9-133h-76z" />
-                </svg>
-              } 
-              onClick={handleAlipayLogin}
-              title="支付宝登录"
-            />
+            {supportedPlatforms.includes('wechat') && (
+              <Button 
+                type="text" 
+                shape="circle" 
+                size="large"
+                icon={<WechatOutlined style={{ fontSize: '24px', color: '#07C160' }} />} 
+                onClick={handleWechatLogin}
+                title="微信登录"
+              />
+            )}
+            {supportedPlatforms.includes('github') && (
+              <Button 
+                type="text" 
+                shape="circle" 
+                size="large"
+                icon={<GithubOutlined style={{ fontSize: '24px' }} />} 
+                onClick={handleGithubLogin}
+                title="GitHub登录"
+              />
+            )}
+            {supportedPlatforms.includes('alipay') && (
+              <Button 
+                type="text" 
+                shape="circle" 
+                size="large"
+                icon={
+                  <svg viewBox="0 0 1024 1024" width="24" height="24" fill="#1677FF">
+                    <path d="M230.1 630.2l-76.9 132.9h152.2l76.9-132.9H230.1z m224.2-387.7l-76.9 133h304.4l76.9-133H454.3z m0 258.5l-76.9 133h228.2l76.9-133H454.3z m380.5-258.5h-76.2l-76.9 133h152.2l76.9-133h-76z m0 258.5h-76.2l-76.9 133h152.2l76.9-133h-76z" />
+                  </svg>
+                } 
+                onClick={handleAlipayLogin}
+                title="支付宝登录"
+              />
+            )}
           </div>
         </Form>
 
-        <div style={{ 
-          marginTop: 24, 
-          padding: 16, 
-          background: "#f8fafc", 
-          borderRadius: 6,
-          textAlign: "center"
-        }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            默认账号：admin / admin123
-          </Text>
-        </div>
+        {!ssoEnabled && (
+          <div style={{ 
+            marginTop: 24, 
+            padding: 16, 
+            background: "#f8fafc", 
+            borderRadius: 6,
+            textAlign: "center"
+          }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              默认账号：admin / admin123
+            </Text>
+          </div>
+        )}
+        
+        {ssoEnabled && (
+          <div style={{ 
+            marginTop: 24, 
+            padding: 16, 
+            background: "#e6f7ff", 
+            borderRadius: 6,
+            textAlign: "center"
+          }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              SSO模式已启用，将跳转到统一认证中心
+            </Text>
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -33,6 +33,21 @@ spring:
     out-of-order: true
     validate-on-migrate: false
 
+  # Redis 配置
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      # password: ${SPRING_REDIS_PASSWORD:} # Redis密码，如果没有密码则注释掉
+      database: ${SPRING_REDIS_DATABASE:0}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
   # OAuth2 资源服务器配置
   security:
     oauth2:
@@ -61,6 +76,11 @@ webapp:
   oauth2:
     enable-pkce: true # 默认禁用PKCE，使用Basic认证
     # 可以通过环境变量启用: -Dwebapp.oauth2.enable-pkce=true
+  pkce:
+    # PKCE参数在Redis中的过期时间（秒）
+    ttl: 600 # 10分钟
+    # Redis key前缀
+    key-prefix: "pkce:"
 
 # 日志配置
 logging:

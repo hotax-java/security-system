@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TokenManager } from '../../services/tokenManager';
 import { authService } from '../../services/authService';
+import { AuthConfigService } from '../../services/authConfigService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -75,16 +76,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
     );
   }
   
-  // 未认证状态 - 直接跳转到登录页面
+  // 未认证状态 - 跳转到本地登录页面
   if (!isAuthorized) {
-    console.log('ProtectedRoute: 用户未认证，直接跳转到登录页面');
+    console.log('ProtectedRoute: 用户未认证，跳转到本地登录页面');
     window.location.replace('/login');
     return null; // 返回null，因为页面会跳转
   }
 
-  // 权限不足状态 - 直接跳转到登录页面
+  // 权限不足状态 - 跳转到本地登录页面
   if (!hasRequiredPermission) {
-    console.log('ProtectedRoute: 权限不足，直接跳转到登录页面');
+    console.log('ProtectedRoute: 权限不足，跳转到本地登录页面');
     window.location.replace('/login');
     return null; // 返回null，因为页面会跳转
   }
