@@ -155,7 +155,7 @@ public class WechatOAuth2Controller {
                         redirectUrl = userLoginService.generateAuthorizationCodeAndRedirectWithPkce(
                                 user, wechatOAuth2Config.getFrontendCallbackUrl(), "wechat",
                                 pkceParams.get("code_challenge"),
-                                pkceParams.get("code_challenge_method"));
+                                pkceParams.get("code_challenge_method"), state);
 
                         // 使用完后删除PKCE参数
                         pkceStateStore.removePkceParams(state);

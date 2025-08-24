@@ -347,55 +347,30 @@
 
     <!-- 引入PKCE工具类 -->
     <script src="/js/pkce-utils.js"></script>
-    
+
     <script>
-        // 解析URL参数
-        function getUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
+        // 从后端模板获取参数（通过Thymeleaf）
+        function getServerParams() {
             return {
-                client_id: urlParams.get('client_id'),
-                redirect_uri: urlParams.get('redirect_uri'),
-                scope: urlParams.get('scope'),
-                state: urlParams.get('state'),
-                code_challenge: urlParams.get('code_challenge'),
-                code_challenge_method: urlParams.get('code_challenge_method'),
-                response_type: urlParams.get('response_type'),
-                code_verifier: urlParams.get('code_verifier') // 8081传递的code_verifier
+                client_id: /*[[${client_id}]]*/ '[[${client_id}]]' || null,
+                redirect_uri: /*[[${redirect_uri}]]*/ '[[${redirect_uri}]]' || null,
+                scope: /*[[${scope}]]*/ '[[${scope}]]' || null,
+                state: /*[[${state}]]*/ '[[${state}]]' || null,
+                code_challenge: /*[[${code_challenge}]]*/ '[[${code_challenge}]]' || null,
+                code_challenge_method: /*[[${code_challenge_method}]]*/ '[[${code_challenge_method}]]' || null,
+                response_type: /*[[${response_type}]]*/ '[[${response_type}]]' || null,
             };
         }
 
-        // 页面加载时处理URL参数
-        window.addEventListener('DOMContentLoaded', function() {
-            const urlParams = getUrlParams();
-            console.log('接收到的URL参数:', urlParams);
-            
-            // 如果有OAuth2授权参数，直接跳转到授权接口
-            if (urlParams.client_id && urlParams.redirect_uri && urlParams.state) {
-                console.log('检测到OAuth2授权请求，准备跳转到授权接口');
-                
-                // 构建授权URL参数
-                const authParams = new URLSearchParams();
-                if (urlParams.client_id) authParams.set('client_id', urlParams.client_id);
-                if (urlParams.redirect_uri) authParams.set('redirect_uri', urlParams.redirect_uri);
-                if (urlParams.scope) authParams.set('scope', urlParams.scope);
-                if (urlParams.state) authParams.set('state', urlParams.state);
-                if (urlParams.code_challenge) authParams.set('code_challenge', urlParams.code_challenge);
-                if (urlParams.code_challenge_method) authParams.set('code_challenge_method', urlParams.code_challenge_method);
-                if (urlParams.response_type) authParams.set('response_type', urlParams.response_type);
-                
-                // 如果8081传递了code_verifier，需要存储到localStorage供后续token交换使用
-                if (urlParams.code_verifier && urlParams.state) {
-                    localStorage.setItem('pkce_code_verifier', urlParams.code_verifier);
-                    localStorage.setItem('pkce_state', urlParams.state);
-                    console.log('已存储8081传递的PKCE参数到localStorage');
-                }
-                
-                // 直接跳转到Spring Security的OAuth2授权接口
-                const authorizeUrl = '/oauth2/authorize?' + authParams.toString();
-                console.log('跳转到授权接口:', authorizeUrl);
-                window.location.href = authorizeUrl;
-                return;
-            }
+        // 全局变量存储服务器参数
+        let serverParams = null;
+
+        // 页面加载时处理服务器传递的参数
+        window.addEventListener('DOMContentLoaded', async function () {
+            serverParams = getServerParams();
+            console.log('从服务器接收到的参数:', serverParams);
+            // 如果不是OAuth2授权请求，预构建第三方登录URL
+            await prebuildThirdPartyLoginUrls();
         });
 
         // 密码显示/隐藏切换
@@ -414,50 +389,87 @@
             }
         });
 
-        // 第三方登录按钮点击事件 - 现在也支持PKCE参数生成
-        document.querySelector('.oauth-icon.wechat').addEventListener('click', async function() {
-            await handleThirdPartyLoginWithPkce('wechat');
-        });
-        
-        document.querySelector('.oauth-icon.github').addEventListener('click', async function() {
-            await handleThirdPartyLoginWithPkce('github');
-        });
-        
-        document.getElementById('alipayBtn').addEventListener('click', async function() {
-            await handleThirdPartyLoginWithPkce('alipay');
+        // 存储预构建的第三方登录URL
+        let thirdPartyLoginUrls = {};
+
+        // 页面加载时预构建第三方登录URL
+        async function prebuildThirdPartyLoginUrls() {
+            try {
+                console.log('开始预构建第三方登录URL');
+                // 为每个第三方平台构建URL
+                const platforms = ['wechat', 'github', 'alipay'];
+
+                for (const platform of platforms) {
+                    // 检查后端是否传递了必要的PKCE参数
+                    if (!serverParams.code_challenge || !serverParams.state) {
+                        throw new Error('缺少必要的PKCE参数：code_challenge、code_verifier或state未从后端传递');
+                    }
+
+                    const codeChallenge = serverParams.code_challenge;
+                    const state = serverParams.state;
+                    console.log(`使用后端传递的PKCE参数构建${platform}登录URL`);
+
+                    // 构建第三方登录URL
+                    const authUrl = PkceUtils.buildAuthUrl(
+                        platform,
+                        serverParams.client_id || 'webapp-client',
+                        serverParams.redirect_uri || 'http://localhost:9000/test/callback',
+                        serverParams.scope || 'read write openid profile offline_access',
+                        codeChallenge,
+                        state
+                    );
+
+                    // 存储URL和对应的PKCE参数
+                    thirdPartyLoginUrls[platform] = {
+                        url: authUrl,
+                        state: state
+                    };
+
+                    console.log(`已预构建${platform}登录URL`);
+                }
+
+                console.log('所有第三方登录URL预构建完成');
+            } catch (error) {
+                console.error('预构建第三方登录URL失败:', error);
+            }
+        }
+
+        // 第三方登录按钮点击事件 - 直接跳转到预构建的URL
+        document.querySelector('.oauth-icon.wechat').addEventListener('click', function () {
+            handleThirdPartyLogin('wechat');
         });
 
-        // 统一的第三方登录处理函数，支持PKCE
-        async function handleThirdPartyLoginWithPkce(platform) {
+        document.querySelector('.oauth-icon.github').addEventListener('click', function () {
+            handleThirdPartyLogin('github');
+        });
+
+        document.getElementById('alipayBtn').addEventListener('click', function () {
+            handleThirdPartyLogin('alipay');
+        });
+
+        // 统一的第三方登录处理函数 - 直接跳转
+        function handleThirdPartyLogin(platform) {
             try {
-                console.log(`开始${platform}PKCE登录流程`);
-                
-                // 生成PKCE参数
-                const pkceParams = await PkceUtils.generatePkceParams();
-                
-                // 生成state参数
-                const state = PkceUtils.generateRandomString(32);
-                
-                // 存储PKCE参数到localStorage
-                localStorage.setItem('pkce_code_verifier', pkceParams.codeVerifier);
-                localStorage.setItem('pkce_state', state);
-                console.log('已生成并存储PKCE参数');
-                
-                // 构建第三方登录URL
-                const authUrl = PkceUtils.buildAuthUrl(
-                    platform,
-                    'webapp-client',
-                    'http://localhost:9000/test/callback',
-                    'read write openid profile offline_access',
-                    pkceParams.codeChallenge,
-                    state
-                );
-                
-                console.log(`跳转到${platform}授权页面:`, authUrl);
-                window.location.href = authUrl;
-                
+                const loginData = thirdPartyLoginUrls[platform];
+                if (!loginData) {
+                    console.error(`${platform}登录URL未预构建`);
+                    alert(`${platform}登录失败: 登录URL未准备好`);
+                    return;
+                }
+
+                console.log(`开始${platform}登录流程`);
+
+                // 存储PKCE参数到localStorage供后续token交换使用
+                localStorage.setItem('pkce_code_verifier', loginData.codeVerifier);
+                localStorage.setItem('pkce_state', loginData.state);
+                console.log('已存储PKCE参数到localStorage');
+
+                // 直接跳转到预构建的授权URL
+                console.log(`跳转到${platform}授权页面:`, loginData.url);
+                window.location.href = loginData.url;
+
             } catch (error) {
-                console.error(`${platform}PKCE登录失败:`, error);
+                console.error(`${platform}登录失败:`, error);
                 alert(`${platform}登录失败: ` + error.message);
             }
         }

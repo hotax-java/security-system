@@ -1,5 +1,6 @@
 package com.webapp.security.sso.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.util.Map;
 
 /**
  * 页面控制器
@@ -17,34 +19,7 @@ public class PageController {
 
     private static final Logger logger = LoggerFactory.getLogger(PageController.class);
 
-    /**
-     * 登录页面
-     *
-     * @param error  错误参数
-     * @param logout 登出参数
-     * @param model  模型
-     * @return 登录页面模板
-     */
-    @GetMapping("/login")
-    public String login(
-            @RequestParam(value = "error", required = false) String error,
-            @RequestParam(value = "logout", required = false) String logout,
-            Model model) {
 
-        logger.info("访问登录页面, error={}, logout={}", error, logout);
-
-        if (error != null) {
-            model.addAttribute("error", true);
-            logger.warn("登录失败，显示错误信息");
-        }
-
-        if (logout != null) {
-            model.addAttribute("logout", true);
-            logger.info("用户已登出");
-        }
-
-        return "login";
-    }
 
     /**
      * PKCE 测试页面

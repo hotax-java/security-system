@@ -21,6 +21,10 @@ export interface LoginConfig {
   // 登录页面配置
   enableThirdPartyLogin: boolean;       // 是否显示第三方登录按钮
   supportedPlatforms: string[];         // 支持的第三方平台
+  
+  // 路由守卫配置
+  bypassRoutes: string[];               // 绕过全局守卫的路由列表
+  currentAppUrl: string;                // 当前应用的URL地址
 }
 
 /**
@@ -36,7 +40,9 @@ const DEFAULT_CONFIG: LoginConfig = {
   codeChallengeMethod: 'S256',
   apiBaseUrl: 'http://localhost:9001',
   enableThirdPartyLogin: true,
-  supportedPlatforms: ['wechat', 'github', 'alipay']
+  supportedPlatforms: ['wechat', 'github', 'alipay'],
+  bypassRoutes: ['/oauth2/callback', '/error'],
+  currentAppUrl: 'http://localhost:8081'
 };
 
 /**
@@ -74,7 +80,13 @@ export class LoginConfigManager {
       enableThirdPartyLogin: process.env.REACT_APP_ENABLE_THIRD_PARTY_LOGIN !== 'false', // 默认启用
       supportedPlatforms: process.env.REACT_APP_SUPPORTED_PLATFORMS 
         ? process.env.REACT_APP_SUPPORTED_PLATFORMS.split(',').map(p => p.trim())
-        : DEFAULT_CONFIG.supportedPlatforms
+        : DEFAULT_CONFIG.supportedPlatforms,
+      
+      // 路由守卫配置
+      bypassRoutes: process.env.REACT_APP_BYPASS_ROUTES
+        ? process.env.REACT_APP_BYPASS_ROUTES.split(',').map(r => r.trim())
+        : DEFAULT_CONFIG.bypassRoutes,
+      currentAppUrl: process.env.REACT_APP_CURRENT_APP_URL || DEFAULT_CONFIG.currentAppUrl
     };
     
     console.log('登录配置已加载:', this.config);
@@ -181,6 +193,20 @@ export class LoginConfigManager {
   }
   
   /**
+   * 获取绕过路由列表
+   */
+  static getBypassRoutes(): string[] {
+    return this.getConfig().bypassRoutes;
+  }
+  
+  /**
+   * 获取当前应用URL
+   */
+  static getCurrentAppUrl(): string {
+    return this.getConfig().currentAppUrl;
+  }
+  
+  /**
    * 打印当前配置（用于调试）
    */
   static debugConfig(): void {
@@ -195,6 +221,8 @@ export class LoginConfigManager {
     console.log('授权范围:', config.scope);
     console.log('第三方登录:', config.enableThirdPartyLogin ? '✅ 启用' : '❌ 禁用');
     console.log('支持平台:', config.supportedPlatforms.join(', '));
+    console.log('绕过路由:', config.bypassRoutes.join(', '));
+    console.log('当前应用URL:', config.currentAppUrl);
     console.groupEnd();
   }
 }

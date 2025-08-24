@@ -165,7 +165,7 @@ public class UserLoginService {
          * @return 重定向URL
          */
         public String generateAuthorizationCodeAndRedirectWithPkce(SysUser user, String frontendCallbackUrl,
-                        String platform, String codeChallenge, String codeChallengeMethod) {
+                        String platform, String codeChallenge, String codeChallengeMethod, String state) {
                 try {
                         // 获取webapp客户端配置
                         RegisteredClient registeredClient = oAuth2Service
@@ -181,11 +181,6 @@ public class UserLoginService {
                                         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                                         .authorizedScopes(registeredClient.getScopes());
 
-                        // 生成随机的state值
-                        String state = UUID.randomUUID().toString().replaceAll("-", "");
-                        // 可以将平台信息和随机值结合
-                        String combinedState = platform + ":" + state;
-
                         // 构建授权URL
                         String authorizationUri = UriComponentsBuilder.fromUriString(issuerUri)
                                         .path("/oauth2/authorize")
@@ -195,7 +190,7 @@ public class UserLoginService {
                         // 添加PKCE相关参数到additionalParameters
                         Map<String, Object> additionalParameters = new HashMap<>();
                         additionalParameters.put("access_type", "offline");
-                        additionalParameters.put(OAuth2ParameterNames.STATE, combinedState);
+                        additionalParameters.put("state", state);
                         additionalParameters.put("code_challenge", codeChallenge);
                         additionalParameters.put("code_challenge_method",
                                         codeChallengeMethod != null ? codeChallengeMethod : "S256");

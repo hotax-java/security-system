@@ -152,7 +152,7 @@ public class GitHubOAuth2Controller {
                         redirectUrl = userLoginService.generateAuthorizationCodeAndRedirectWithPkce(
                                 user, gitHubOAuth2Config.getFrontendCallbackUrl(), "github",
                                 pkceParams.get("code_challenge"),
-                                pkceParams.get("code_challenge_method"));
+                                pkceParams.get("code_challenge_method"), state);
 
                         // 使用完后删除PKCE参数
                         pkceStateStore.removePkceParams(state);

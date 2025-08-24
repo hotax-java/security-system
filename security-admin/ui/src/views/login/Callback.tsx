@@ -6,7 +6,6 @@ import { businessApi } from '../../apis/api';
 import { TokenManager } from '../../services/tokenManager';
 import { AuthConfigService } from '../../services/authConfigService';
 import { PkceUtils } from '../../utils/pkceUtils';
-import { PkceApiService } from '../../services/pkceApiService';
 import ErrorPage from './ErrorPage';
 
 const { Title, Text } = Typography;
@@ -61,14 +60,14 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
             const pkceEnabled = await AuthConfigService.isPkceEnabled();
 
             if (pkceEnabled) {
-                // PKCE模式：通过API接口根据state获取code_verifier
-                try {
-                    const codeVerifier = await PkceApiService.getCodeVerifier(state);
-                    console.log('成功从后端获取code_verifier');
+                // PKCE模式：从前端localStorage根据state获取code_verifier
+                const codeVerifier = PkceUtils.getCodeVerifierByState(state);
+                if (codeVerifier) {
+                    console.log('成功从前端localStorage获取code_verifier');
                     // 使用PKCE模式交换令牌
                     exchangeTokenWithPkce(code, state, clientId, codeVerifier);
-                } catch (error) {
-                    console.error('从后端获取code_verifier失败:', error);
+                } else {
+                    console.error('从前端localStorage获取code_verifier失败');
                     setError('获取PKCE参数失败，请重新登录');
                     setLoading(false);
                     return;
@@ -129,12 +128,9 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
             });
 
             if (response && response.access_token) {
-                // 清除后端存储的PKCE参数
-                try {
-                    await PkceApiService.cleanupPkceParams(state);
-                } catch (error) {
-                    console.warn('清理PKCE参数失败:', error);
-                }
+                // 清除前端localStorage中的PKCE参数
+                PkceUtils.clearPkceParamsByState(state);
+                console.log('已清理前端PKCE参数');
 
                 handleLoginSuccess(response);
             } else {
@@ -146,12 +142,9 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
             setError(error.response?.data?.message || 'Token获取失败');
             setLoading(false);
 
-            // 清除后端存储的PKCE参数
-            try {
-                await PkceApiService.cleanupPkceParams(state);
-            } catch (cleanupError) {
-                console.warn('清理PKCE参数失败:', cleanupError);
-            }
+            // 清除前端localStorage中的PKCE参数
+            PkceUtils.clearPkceParamsByState(state);
+            console.log('已清理前端PKCE参数');
         }
     };
 
