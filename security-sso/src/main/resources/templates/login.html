@@ -347,6 +347,8 @@
 
     <!-- 引入PKCE工具类 -->
     <script src="/js/pkce-utils.js"></script>
+<script src="/js/OAuth2Utils.js"></script>
+<script src="/js/windowUtils.js"></script>
 
     <script>
         // 从后端模板获取参数（通过Thymeleaf）
@@ -398,34 +400,50 @@
                 console.log('开始预构建第三方登录URL');
                 // 为每个第三方平台构建URL
                 const platforms = ['wechat', 'github', 'alipay'];
-
+                debugger
                 for (const platform of platforms) {
-                    // 检查后端是否传递了必要的PKCE参数
-                    if (!serverParams.code_challenge || !serverParams.state) {
-                        throw new Error('缺少必要的PKCE参数：code_challenge、code_verifier或state未从后端传递');
+                    let authUrl, state, isPkceMode = false;
+                    
+                    // 检查后端是否传递了PKCE参数
+                    if (serverParams.code_challenge && serverParams.state) {
+                        // PKCE模式：使用后端传递的参数
+                        const codeChallenge = serverParams.code_challenge;
+                        state = serverParams.state;
+                        isPkceMode = true;
+                        console.log(`使用后端传递的PKCE参数构建${platform}登录URL`);
+
+                        // 构建PKCE模式的第三方登录URL
+                        authUrl = OAuth2Utils.buildPkceAuthUrl(
+                            platform,
+                            serverParams.client_id || 'webapp-client',
+                            serverParams.redirect_uri || 'http://localhost:9000/test/callback',
+                            serverParams.scope || 'read write openid profile offline_access',
+                            codeChallenge,
+                            state
+                        );
+                    } else {
+                        // 非PKCE模式：生成state参数
+                        state = PkceUtils.generateRandomString(32);
+                        console.log(`后端未提供PKCE参数，使用非PKCE模式构建${platform}登录URL`);
+
+                        // 构建非PKCE模式的第三方登录URL
+                        authUrl = OAuth2Utils.buildBasicAuthUrl(
+                            platform,
+                            serverParams.client_id || 'webapp-client',
+                            serverParams.redirect_uri || 'http://localhost:9000/test/callback',
+                            serverParams.scope || 'read write openid profile offline_access',
+                            state
+                        );
                     }
 
-                    const codeChallenge = serverParams.code_challenge;
-                    const state = serverParams.state;
-                    console.log(`使用后端传递的PKCE参数构建${platform}登录URL`);
-
-                    // 构建第三方登录URL
-                    const authUrl = PkceUtils.buildAuthUrl(
-                        platform,
-                        serverParams.client_id || 'webapp-client',
-                        serverParams.redirect_uri || 'http://localhost:9000/test/callback',
-                        serverParams.scope || 'read write openid profile offline_access',
-                        codeChallenge,
-                        state
-                    );
-
-                    // 存储URL和对应的PKCE参数
+                    // 存储URL和对应的参数
                     thirdPartyLoginUrls[platform] = {
                         url: authUrl,
-                        state: state
+                        state: state,
+                        isPkceMode: isPkceMode
                     };
 
-                    console.log(`已预构建${platform}登录URL`);
+                    console.log(`已预构建${platform}登录URL (${isPkceMode ? 'PKCE模式' : '非PKCE模式'})`);
                 }
 
                 console.log('所有第三方登录URL预构建完成');
@@ -457,12 +475,23 @@
                     return;
                 }
 
-                console.log(`开始${platform}登录流程`);
+                console.log(`开始${platform}登录流程 (${loginData.isPkceMode ? 'PKCE模式' : '非PKCE模式'})`);
 
-                // 存储PKCE参数到localStorage供后续token交换使用
-                localStorage.setItem('pkce_code_verifier', loginData.codeVerifier);
-                localStorage.setItem('pkce_state', loginData.state);
-                console.log('已存储PKCE参数到localStorage');
+                // 根据模式存储相应的参数到localStorage
+                if (loginData.isPkceMode) {
+                    // PKCE模式：使用PkceUtils存储完整的PKCE参数（从后端获取的）
+                    PkceUtils.storePkceParams(
+                        serverParams.code_verifier || '',
+                        serverParams.code_challenge || '',
+                        loginData.state,
+                        platform
+                    );
+                    console.log('已通过PkceUtils存储PKCE参数到localStorage');
+                } else {
+                    // 非PKCE模式：使用PkceUtils存储基础OAuth参数
+                    PkceUtils.storeOAuthParams(loginData.state, platform);
+                    console.log('已通过PkceUtils存储OAuth参数到localStorage');
+                }
 
                 // 直接跳转到预构建的授权URL
                 console.log(`跳转到${platform}授权页面:`, loginData.url);

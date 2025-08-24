@@ -1,6 +1,6 @@
 /**
  * PKCE (Proof Key for Code Exchange) 工具类
- * 用于OAuth2授权码流程的安全增强
+ * 专注于PKCE参数的生成和存储
  */
 class PkceUtils {
     
@@ -93,6 +93,20 @@ class PkceUtils {
     }
 
     /**
+     * 存储OAuth参数到localStorage（非PKCE模式）
+     * @param {string} state state参数
+     * @param {string} platform OAuth平台名称
+     */
+    static storeOAuthParams(state, platform) {
+        localStorage.setItem('state', state);
+        localStorage.setItem('oauth_platform', platform);
+        
+        console.log('OAuth参数已存储到localStorage');
+        console.log('platform:', platform);
+        console.log('state:', state);
+    }
+
+    /**
      * 从localStorage获取PKCE参数
      * @returns {Object} PKCE参数对象
      */
@@ -115,119 +129,4 @@ class PkceUtils {
         localStorage.removeItem('oauth_platform');
         console.log('PKCE参数已从localStorage清除');
     }
-
-    /**
-     * 构建OAuth2授权URL
-     * @param {string} platform OAuth平台名称
-     * @param {string} clientId 客户端ID
-     * @param {string} redirectUri 重定向URI
-     * @param {string} scope 授权范围
-     * @param {string} codeChallenge code_challenge参数
-     * @param {string} state state参数
-     * @returns {string} 完整的授权URL
-     */
-    static buildAuthUrl(platform, clientId, redirectUri, scope, codeChallenge, state) {
-        const baseUrl = `/oauth2/${platform}/authorize`;
-        const params = new URLSearchParams({
-            response_type: 'code',
-            client_id: clientId,
-            redirect_uri: redirectUri,
-            scope: scope,
-            code_challenge_method: 'S256',
-            code_challenge: codeChallenge,
-            state: state,
-            access_type: 'offline'
-        });
-        
-        return `${baseUrl}?${params.toString()}`;
-    }
-
-    /**
-     * 处理第三方登录（通用方法）
-     * @param {string} platform OAuth平台名称
-     * @param {Object} options 配置选项
-     * @param {string} options.clientId 客户端ID，默认为'webapp-client'
-     * @param {string} options.redirectUri 重定向URI，默认为'http://localhost:9000/test/callback'
-     * @param {string} options.scope 授权范围，默认为'read write openid profile offline_access'
-     */
-    static async handleThirdPartyLogin(platform, options = {}) {
-        try {
-            console.log(`开始${platform}PKCE登录流程`);
-            
-            // 默认配置
-            const config = {
-                clientId: 'webapp-client',
-                redirectUri: 'http://localhost:9000/test/callback',
-                scope: 'read write openid profile offline_access',
-                ...options
-            };
-            
-            // 生成PKCE参数
-            const pkceParams = await this.generatePkceParams();
-            
-            // 生成state参数
-            const state = this.generateRandomString(32);
-            
-            // 存储到localStorage
-            this.storePkceParams(
-                pkceParams.codeVerifier,
-                pkceParams.codeChallenge,
-                state,
-                platform
-            );
-            
-            // 构建授权URL
-            const authUrl = this.buildAuthUrl(
-                platform,
-                config.clientId,
-                config.redirectUri,
-                config.scope,
-                pkceParams.codeChallenge,
-                state
-            );
-            
-            console.log(`跳转到${platform}授权页面:`, authUrl);
-            
-            // 跳转到授权页面
-            window.location.href = authUrl;
-            
-        } catch (error) {
-            console.error(`${platform}PKCE登录失败:`, error);
-            alert(`${platform}登录失败: ` + error.message);
-        }
-    }
-
-    /**
-     * 支付宝登录
-     * @param {Object} options 配置选项
-     */
-    static async alipayLogin(options = {}) {
-        await this.handleThirdPartyLogin('alipay', options);
-    }
-
-    /**
-     * 微信登录
-     * @param {Object} options 配置选项
-     */
-    static async wechatLogin(options = {}) {
-        await this.handleThirdPartyLogin('wechat', options);
-    }
-
-    /**
-     * GitHub登录
-     * @param {Object} options 配置选项
-     */
-    static async githubLogin(options = {}) {
-        await this.handleThirdPartyLogin('github', options);
-    }
-}
-
-// 导出到全局作用域，方便在HTML页面中使用
-if (typeof window !== 'undefined') {
-    window.PkceUtils = PkceUtils;
-}
-
-// 如果支持模块导出，也提供模块导出
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PkceUtils;
 }

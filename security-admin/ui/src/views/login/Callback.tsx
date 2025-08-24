@@ -67,9 +67,11 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
                     // 使用PKCE模式交换令牌
                     exchangeTokenWithPkce(code, state, clientId, codeVerifier);
                 } else {
-                    console.error('从前端localStorage获取code_verifier失败');
-                    setError('获取PKCE参数失败，请重新登录');
-                    setLoading(false);
+                    console.error('从前端localStorage获取code_verifier失败, 尝试传统模式交换令牌');
+                    // setError('获取PKCE参数失败，请重新登录');
+                    // setLoading(false);
+                    // 传统模式交换令牌
+                    exchangeTokenWithCode(code, state, clientId);
                     return;
                 }
             } else {

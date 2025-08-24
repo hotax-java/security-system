@@ -36,62 +36,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         console.log(`SSO ${isSsoEnabled ? '已启用' : '已禁用'}`);
         console.log('支持的第三方平台:', platforms);
         
-        // 如果启用了SSO，直接跳转到SSO登录页面
-        if (isSsoEnabled) {
-          let loginUrl = AuthConfigService.getLoginUrl(window.location.pathname);
-          
-          // 如果启用了PKCE，调用后端API生成PKCE参数
-          if (isPkceEnabled) {
-            try {
-              const pkceParams = await PkceApiService.generatePkceParams();
-              console.log('从后端获取PKCE参数:', {
-                state: pkceParams.state,
-                codeChallenge: pkceParams.codeChallenge,
-                codeChallengeMethod: pkceParams.codeChallengeMethod
-              });
-              
-              const urlParams = new URLSearchParams({
-                state: pkceParams.state,
-                code_challenge: pkceParams.codeChallenge,
-                code_challenge_method: pkceParams.codeChallengeMethod
-              });
-              
-              // 将PKCE参数添加到登录URL
-              const separator = loginUrl.includes('?') ? '&' : '?';
-              loginUrl = loginUrl + separator + urlParams.toString();
-              
-              console.log('SSO登录URL（含PKCE参数）:', loginUrl);
-            } catch (error) {
-              console.error('获取PKCE参数失败:', error);
-              // 即使PKCE参数获取失败，也继续跳转到SSO（不带PKCE参数）
-            }
-          }
-          
-          console.log('SSO模式已启用，跳转到SSO登录页面:', loginUrl);
-          window.location.href = loginUrl;
-          return;
-        }
       } catch (error) {
         console.error('获取认证配置失败:', error);
       }
     };
     
     loadConfig();
-    
-    // 监听页面可见性变化，当页面重新可见时重新检查配置
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('页面重新可见，重新检查配置');
-        loadConfig();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // 清理事件监听器
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
   }, [window.location.pathname]); // 依赖路径变化，确保路由切换时重新检查
 
   const handleSubmit = async (values: { username: string; password: string }) => {
@@ -133,10 +83,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
       
       if (pkceEnabled) {
-        // PKCE模式：调用后端API生成PKCE参数
+        // PKCE模式：前端生成PKCE参数
         try {
-          const pkceParams = await PkceApiService.generatePkceParams();
-          console.log(`从后端获取${platform}登录PKCE参数:`, {
+          const pkceParams = await PkceUtils.generateAndStorePkceParams();
+          
+          console.log(`前端生成${platform}登录PKCE参数:`, {
             state: pkceParams.state,
             codeChallenge: pkceParams.codeChallenge,
             codeChallengeMethod: pkceParams.codeChallengeMethod
@@ -149,16 +100,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             state: pkceParams.state
           });
           
-          window.location.href = authUrl;
+          window.location.replace(authUrl);
         } catch (error) {
-          console.error(`获取${platform}登录PKCE参数失败:`, error);
-          message.error(`获取${platform}登录参数失败，请稍后重试`);
+          console.error(`生成${platform}登录PKCE参数失败:`, error);
+          message.error(`生成${platform}登录参数失败，请稍后重试`);
           return;
         }
       } else {
         // 传统模式
+        const state = PkceUtils.generateRandomString(32);
+        
+        // 存储基础OAuth参数到localStorage
+        localStorage.setItem('oauth_state', state);
+        localStorage.setItem('oauth_platform', platform);
+        
+        // 传统模式不传递PKCE参数，让方法内部处理state参数
         const authUrl = AuthConfigService.getThirdPartyAuthUrl(platform);
-        window.location.href = authUrl;
+        // 手动添加state参数到URL
+        const urlWithState = authUrl + (authUrl.includes('?') ? '&' : '?') + `state=${state}`;
+        window.location.replace(urlWithState);
         console.log(`使用传统模式发起${platform}登录`);
       }
     } catch (error) {
