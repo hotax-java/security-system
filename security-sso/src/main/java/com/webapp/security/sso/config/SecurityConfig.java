@@ -89,7 +89,7 @@ public class SecurityConfig {
                                                 .jwt(Customizer.withDefaults()))
                                 // 添加无状态会话策略
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
                                 // 禁用CSRF保护
                                 .csrf(AbstractHttpConfigurer::disable);
 
@@ -125,8 +125,8 @@ public class SecurityConfig {
                 http
                                 .authorizeHttpRequests((authorize) -> authorize
                                                 .requestMatchers("/login", "/logout", "/oauth2/**", "/v1/oauth2/**",
-                                                                "/.well-known/jwks.json",
-                                                                "/api/token-blacklist/**", "/favicon.ico",
+                                                                "/.well-known/**", "/favicon.ico",
+                                                                "/api/token-blacklist/**", 
                                                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
                                                                 "/error", "/test/**", "/debug/**",
                                                                 "/static/**", "/index.html", "/*.js", "/*.css",
@@ -143,11 +143,7 @@ public class SecurityConfig {
                                                 .permitAll())
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-                                                .sessionFixation().none() // 不要迁移会话，保持同一会话ID
-                                                .maximumSessions(1) // 限制每个用户只能有一个会话
-                                                .expiredUrl("/login"));
-
+                                                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS));
                 return http.build();
         }
 

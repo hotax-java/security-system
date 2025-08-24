@@ -1,9 +1,12 @@
 ﻿import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Card, message, Typography, Space, Divider, Spin } from "antd";
-import { UserOutlined, LockOutlined, LoginOutlined, SafetyOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, message, Typography, Space, Divider } from "antd";
+import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined, GithubOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService";
-import { oauth2Service } from "../../services/oauth2Service";
+import { AuthConfigService } from "../../services/authConfigService";
 import { PkceUtils } from "../../utils/pkceUtils";
+
+// API基础URL
+const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'https://885ro126ov70.vicp.fun';
 
 const { Title, Text } = Typography;
 
@@ -14,7 +17,22 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
-  const [pkceLoading, setPkceLoading] = useState(false);
+  const [pkceEnabled, setPkceEnabled] = useState<boolean>(false);
+  
+  // 获取认证配置
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const isEnabled = await AuthConfigService.isPkceEnabled();
+        setPkceEnabled(isEnabled);
+        console.log(`PKCE ${isEnabled ? '已启用' : '已禁用'}`);
+      } catch (error) {
+        console.error('获取认证配置失败:', error);
+      }
+    };
+    
+    loadConfig();
+  }, []);
 
   const handleSubmit = async (values: { username: string; password: string }) => {
     setLoading(true);
@@ -66,37 +84,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  // 处理授权码登录（PKCE模式）
-  const handleAuthorizationCodeLogin = async () => {
-    setPkceLoading(true);
-    try {
-      // 生成PKCE参数
-      const pkceParams = await PkceUtils.preparePkceParams();
-      
-      // 存储code_verifier到sessionStorage
-      PkceUtils.storeCodeVerifier(pkceParams.codeVerifier);
-      
-      // 生成随机状态参数
-      const state = oauth2Service.generateState();
-      
-      // 构建授权URL
-      const authUrl = oauth2Service.buildAuthorizationUrl({
-        client_id: process.env.REACT_APP_OAUTH2_CLIENT_ID || 'webapp-client',
-        redirect_uri: process.env.REACT_APP_OAUTH2_REDIRECT_URI || 'http://localhost:3000/callback',
-        scope: process.env.REACT_APP_OAUTH2_SCOPE || 'read,write,openid,profile,offline_access',
-        code_challenge: pkceParams.codeChallenge,
-        state,
-      });
-      
-      console.log('跳转到授权页面:', authUrl);
-      // 跳转到SSO授权页面
-      window.location.href = authUrl;
-    } catch (error) {
-      console.error('授权码登录失败:', error);
-      message.error('授权码登录失败，请稍后重试');
-      setPkceLoading(false);
-    }
-  };
+  // 替换特定平台的处理函数
+  const handleWechatLogin = () => handleThirdPartyLogin('wechat');
+  const handleGithubLogin = () => handleThirdPartyLogin('github');
+  const handleAlipayLogin = () => handleThirdPartyLogin('alipay');
 
   return (
     <div style={{
@@ -196,26 +187,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </Form.Item>
 
           <Divider plain>
-            <Text type="secondary">或</Text>
+            <Text type="secondary">第三方账号登录</Text>
           </Divider>
 
-          <Form.Item style={{ marginBottom: 16 }}>
-            <Button
-              type="default"
-              block
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px' }}>
+            <Button 
+              type="text" 
+              shape="circle" 
               size="large"
-              icon={<SafetyOutlined />}
-              loading={pkceLoading}
-              onClick={handleAuthorizationCodeLogin}
-              style={{
-                height: 48,
-                border: "1px solid #667eea",
-                color: "#667eea"
-              }}
-            >
-              {pkceLoading ? "准备中..." : "授权码登录"}
-            </Button>
-          </Form.Item>
+              icon={<WechatOutlined style={{ fontSize: '24px', color: '#07C160' }} />} 
+              onClick={handleWechatLogin}
+              title="微信登录"
+            />
+            <Button 
+              type="text" 
+              shape="circle" 
+              size="large"
+              icon={<GithubOutlined style={{ fontSize: '24px' }} />} 
+              onClick={handleGithubLogin}
+              title="GitHub登录"
+            />
+            <Button 
+              type="text" 
+              shape="circle" 
+              size="large"
+              icon={
+                <svg viewBox="0 0 1024 1024" width="24" height="24" fill="#1677FF">
+                  <path d="M230.1 630.2l-76.9 132.9h152.2l76.9-132.9H230.1z m224.2-387.7l-76.9 133h304.4l76.9-133H454.3z m0 258.5l-76.9 133h228.2l76.9-133H454.3z m380.5-258.5h-76.2l-76.9 133h152.2l76.9-133h-76z m0 258.5h-76.2l-76.9 133h152.2l76.9-133h-76z" />
+                </svg>
+              } 
+              onClick={handleAlipayLogin}
+              title="支付宝登录"
+            />
+          </div>
         </Form>
 
         <div style={{ 
